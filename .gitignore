@@ -32,6 +32,10 @@ Builds/
 # Development tools (not part of Unity Package)
 DevTools/
 
+# Build configuration files (not part of Unity Package)
+package-build.json
+package-build.json.meta
+
 # Temporary files
 *.log
 *.cache

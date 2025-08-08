@@ -2,6 +2,19 @@
 
 所有重要更改都将记录在此文件中。
 
+## [1.0.3] - 2025-08-08
+
+### 修复
+- 🚫 彻底移除package-build.json等构建配置文件
+- 📋 优化.gitignore、.npmignore、.gitattributes配置
+- 🔧 精确指定package.json中的files字段
+- 📁 确保Unity Package只包含必要的运行时文件
+- 🛡️ 加强多层文件过滤保护
+
+### 改进
+- 📦 进一步清理Unity Package内容
+- 🎯 确保完全没有构建和开发工具相关的警告
+
 ## [1.0.2] - 2025-08-08
 
 ### 修复

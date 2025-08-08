@@ -2,7 +2,18 @@
 DevTools/
 Build/
 .cursor/
+
+# 排除构建配置文件
 package-build.json
+package-build.json.meta
+
+# 排除临时文件
 *.log
 .DS_Store
 Thumbs.db
+
+# 排除Git相关文件
+.git/
+.gitignore
+.gitattributes
+.npmignore

@@ -2,5 +2,13 @@
 # Exclude development tools from package distribution
 DevTools/ export-ignore
 Build/ export-ignore
-package-build.json export-ignore
 .cursor/ export-ignore
+
+# Exclude build configuration files
+package-build.json export-ignore
+package-build.json.meta export-ignore
+
+# Exclude Git and NPM configuration files
+.gitignore export-ignore
+.gitattributes export-ignore
+.npmignore export-ignore
