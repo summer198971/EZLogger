@@ -29,7 +29,7 @@ namespace EZLogger
         /// <summary>
         /// 系统错误/异常处理事件
         /// </summary>
-        public event Action<string, string, LogType> OnSystemLogReceived;
+        public event Action<string, string, LogLevel> OnSystemLogReceived;
 
         /// <summary>
         /// 启动系统日志监控
