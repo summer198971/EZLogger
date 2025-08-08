@@ -25,9 +25,11 @@ Logs/
 ehthumbs.db
 Thumbs.db
 
-# Build outputs
+# Build outputs  
 Build/
 Builds/
+bin/
+obj/
 
 # Development tools (not part of Unity Package)
 DevTools/
@@ -39,3 +41,18 @@ package-build.json.meta
 # Temporary files
 *.log
 *.cache
+
+# IDE and development configuration files (not part of Unity Package)
+*.csproj
+*.sln
+.vscode/
+.editorconfig
+
+# .NET specific
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/

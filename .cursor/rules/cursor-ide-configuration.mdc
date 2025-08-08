@@ -1,0 +1,234 @@
+---
+description: "Cursor编辑器在Unity Package项目中的配置和问题解决"
+alwaysApply: true
+---
+
+# Cursor编辑器Unity Package项目配置
+
+解决Unity Package项目中代码提示和引用错误的问题。
+
+## 🚨 常见问题
+
+### 问题: Cursor中C#代码提示和引用不正确
+**症状**:
+- 代码提示不工作或不准确
+- 无法跳转到定义
+- UnityEngine命名空间无法识别
+- 项目间引用关系错误
+
+**根本原因**:
+1. Unity Package项目没有标准的.csproj/.sln文件
+2. Cursor无法识别Unity Assembly Definition (.asmdef) 文件
+3. 缺少Unity引擎的引用配置
+
+## ✅ 解决方案
+
+### 1. 创建.csproj项目文件
+
+为每个Assembly Definition创建对应的.csproj文件:
+
+#### EZLogger.Runtime.csproj
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>EZLogger</RootNamespace>
+    <AssemblyName>EZLogger.Runtime</AssemblyName>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Runtime/**/*.cs" />
+    <Compile Remove="Runtime/**/*.cs.meta" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Unity Engine References -->
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>/Applications/Unity/Hub/Editor/2022.3.31f1/Unity.app/Contents/Managed/UnityEngine/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>/Applications/Unity/Hub/Editor/2022.3.31f1/Unity.app/Contents/Managed/UnityEngine/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
+```
+
+#### EZLogger.Editor.csproj
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>EZLogger.Editor</RootNamespace>
+    <AssemblyName>EZLogger.Editor</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Editor/**/*.cs" />
+    <Compile Remove="Editor/**/*.cs.meta" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Project References -->
+    <ProjectReference Include="EZLogger.Runtime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Unity Engine + Editor References -->
+    <Reference Include="UnityEngine.CoreModule">...</Reference>
+    <Reference Include="UnityEditor.CoreModule">...</Reference>
+  </ItemGroup>
+</Project>
+```
+
+### 2. 创建解决方案文件
+
+**EZLogger.sln**:
+```
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EZLogger.Runtime", "EZLogger.Runtime.csproj", "{GUID}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EZLogger.Editor", "EZLogger.Editor.csproj", "{GUID}"
+...
+```
+
+### 3. 创建VSCode/Cursor配置
+
+**.vscode/settings.json**:
+```json
+{
+  "omnisharp.defaultLaunchSolution": "EZLogger.sln",
+  "dotnet.defaultSolution": "EZLogger.sln",
+  "files.associations": {
+    "*.asmdef": "json",
+    "*.meta": "yaml"
+  },
+  "files.exclude": {
+    "**/*.meta": false,
+    "**/Library": true,
+    "**/Temp": true
+  },
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+  "csharp.semanticHighlighting.enabled": true
+}
+```
+
+### 4. Unity路径配置
+
+**重要**: 根据实际Unity安装路径调整引用:
+
+```bash
+# 查找Unity安装路径
+find /Applications -name "Unity.app" -type d 2>/dev/null
+
+# 示例输出: /Applications/Unity/Hub/Editor/2022.3.31f1/Unity.app
+```
+
+在.csproj文件中使用正确的路径:
+```xml
+<Reference Include="UnityEngine.CoreModule">
+  <HintPath>/Applications/Unity/Hub/Editor/[YOUR_VERSION]/Unity.app/Contents/Managed/UnityEngine/UnityEngine.CoreModule.dll</HintPath>
+</Reference>
+```
+
+## 🔧 配置步骤
+
+### 自动化脚本
+```bash
+#!/bin/bash
+# setup-cursor-project.sh
+
+echo "🔧 配置Cursor编辑器Unity Package项目..."
+
+# 1. 查找Unity安装路径
+UNITY_PATH=$(find /Applications -name "Unity.app" -type d 2>/dev/null | head -1)
+if [ -z "$UNITY_PATH" ]; then
+    echo "❌ 未找到Unity安装，请手动配置Unity路径"
+    exit 1
+fi
+
+echo "✅ 找到Unity: $UNITY_PATH"
+
+# 2. 创建项目文件
+echo "📁 创建.csproj文件..."
+# (脚本中自动生成.csproj文件，替换Unity路径)
+
+# 3. 创建VSCode配置
+echo "⚙️ 创建VSCode配置..."
+mkdir -p .vscode
+# (生成settings.json等配置文件)
+
+# 4. 重启Cursor
+echo "🔄 请重启Cursor编辑器以应用配置"
+```
+
+## 📋 验证清单
+
+配置完成后验证:
+
+1. **重启Cursor编辑器**
+2. **等待OmniSharp加载完成** (状态栏显示"Ready")
+3. **测试代码提示**:
+   - 输入`UnityEngine.`应该有代码提示
+   - `Ctrl+点击`应该能跳转到定义
+   - 项目间引用应该正确解析
+
+4. **检查问题面板**:
+   - 应该没有"找不到程序集"错误
+   - 语法高亮应该正常
+
+## ⚠️ 注意事项
+
+### 1. Unity版本兼容性
+不同Unity版本的DLL路径可能不同，需要根据实际安装调整。
+
+### 2. .gitignore配置
+这些IDE配置文件和构建产物不应包含在Unity Package中:
+```
+# Build outputs  
+Build/
+Builds/
+bin/
+obj/
+
+# IDE and development configuration files
+*.csproj
+*.sln
+.vscode/
+.editorconfig
+
+# .NET specific
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/
+```
+
+### 3. 性能优化
+对于大型项目，可以在settings.json中配置:
+```json
+{
+  "omnisharp.enableMsBuildLoadProjectsOnDemand": false,
+  "omnisharp.projectLoadTimeout": 120
+}
+```
+
+### 4. 故障排除
+如果仍有问题:
+1. 清理OmniSharp缓存: `Ctrl+Shift+P` → "OmniSharp: Restart OmniSharp"
+2. 检查Output面板的OmniSharp Log
+3. 确认Unity DLL文件存在并可访问
+4. 检查.csproj文件中的路径是否正确
+
+## 🚀 最佳实践
+
+1. **自动化配置**: 创建setup脚本自动生成配置文件
+2. **版本管理**: 使用变量管理Unity版本，便于更新
+3. **团队协作**: 为团队创建统一的配置模板
+4. **文档更新**: 在README中说明开发环境配置步骤
+
+这样配置后，Cursor编辑器就能正确提供C#代码提示和引用跳转功能了。
