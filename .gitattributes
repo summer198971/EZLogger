@@ -1,0 +1,5 @@
+# Unity Package Manager configuration
+# Exclude development tools from package distribution
+DevTools/ export-ignore
+Build/ export-ignore
+package-build.json export-ignore

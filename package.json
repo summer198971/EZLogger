@@ -5,9 +5,9 @@
   "description": "A high-performance, zero-allocation logging system for Unity with multi-level support and server integration.",
   "unity": "2020.3",
   "unityRelease": "0f1",
-  "documentationUrl": "https://github.com/yourusername/ezlogger/wiki",
-  "changelogUrl": "https://github.com/yourusername/ezlogger/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/yourusername/ezlogger/blob/main/LICENSE.md",
+  "documentationUrl": "https://github.com/summer198971/EZLogger/wiki",
+  "changelogUrl": "https://github.com/summer198971/EZLogger/blob/master/CHANGELOG.md",
+  "licensesUrl": "https://github.com/summer198971/EZLogger/blob/master/LICENSE.md",
   "keywords": [
     "logging",
     "debug",
