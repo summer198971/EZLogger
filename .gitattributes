@@ -3,3 +3,4 @@
 DevTools/ export-ignore
 Build/ export-ignore
 package-build.json export-ignore
+.cursor/ export-ignore
