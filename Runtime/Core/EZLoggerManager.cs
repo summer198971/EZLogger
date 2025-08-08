@@ -304,17 +304,17 @@ namespace EZLogger
             return EnabledLevels.Contains(level);
         }
 
-                /// <summary>
+        /// <summary>
         /// 记录日志消息
         /// </summary>
         public void Log(LogMessage message)
         {
             if (!IsLevelEnabled(message.Level))
                 return;
-                
+
             // 分别处理同步和异步输出器
             WriteToSyncAppenders(message);
-            
+
             if (_configuration.EnableAsyncWrite && _isRunning)
             {
                 // 异步写入到支持异步的输出器
@@ -358,10 +358,6 @@ namespace EZLogger
             try
             {
                 Log(LogLevel.Error, tag, message);
-#if !UNITY_EDITOR
-                // 在非编辑器环境下也输出到Unity控制台
-                UnityEngine.Debug.LogError($"[{tag}] {message}");
-#endif
             }
             finally
             {

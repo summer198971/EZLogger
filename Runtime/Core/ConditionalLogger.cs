@@ -47,18 +47,8 @@ namespace EZLogger
             SystemLogMonitor.Instance.SetPreventDuplicate(_level, true);
             try
             {
+                // 通过正常的日志管道输出，由UnityAppender负责Unity控制台输出
                 _logger.Log(_level, tag, message);
-#if !UNITY_EDITOR
-                // 在非编辑器环境下也输出到Unity控制台
-                if (_level == LogLevel.Error)
-                {
-                    UnityEngine.Debug.LogError($"[{tag}] {message}");
-                }
-                else if (_level == LogLevel.Exception)
-                {
-                    UnityEngine.Debug.LogError($"[{tag}] {message}");
-                }
-#endif
             }
             finally
             {
@@ -108,13 +98,6 @@ namespace EZLogger
                 try
                 {
                     _logger.Log(logMessage);
-#if !UNITY_EDITOR
-                    // 在非编辑器环境下也输出到Unity控制台
-                    if (_level == LogLevel.Error || _level == LogLevel.Exception)
-                    {
-                        UnityEngine.Debug.LogError($"[{tag}] {message}");
-                    }
-#endif
                 }
                 finally
                 {

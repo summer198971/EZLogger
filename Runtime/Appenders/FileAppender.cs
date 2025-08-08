@@ -13,10 +13,10 @@ namespace EZLogger.Appenders
     public class FileAppender : LogAppenderBase
     {
         public override string Name => "File";
-        
+
         /// <summary>文件输出器支持异步写入，避免IO阻塞主线程</summary>
         public override bool SupportsAsyncWrite => true;
-        
+
         private FileOutputConfig _config;
         private FileStream _fileStream;
         private StreamWriter _streamWriter;
@@ -26,17 +26,17 @@ namespace EZLogger.Appenders
         private ThreadSafeQueue<string> _writeQueue;
         private Thread _writeThread;
         private volatile bool _isWriteThreadRunning;
-        
+
         protected override void InitializeCore(object config)
         {
             _config = config as FileOutputConfig ?? new FileOutputConfig();
-            
+
             // 创建日志目录
             CreateLogDirectory();
-            
+
             // 打开日志文件
             OpenLogFile();
-            
+
             // 启动异步写入线程
             if (_config.Enabled)
             {
@@ -48,7 +48,7 @@ namespace EZLogger.Appenders
                     IsBackground = true
                 };
                 _writeThread.Start();
-                
+
                 // 启动文件大小检查定时器
                 if (_config.EnableSizeCheck)
                 {
@@ -57,14 +57,14 @@ namespace EZLogger.Appenders
                 }
             }
         }
-        
+
         protected override void WriteLogCore(LogMessage message)
         {
             if (!_config.Enabled || _writeQueue == null)
                 return;
-                
+
             string formattedMessage = FormatMessage(message);
-            
+
             // 异步写入队列
             if (!_writeQueue.Enqueue(formattedMessage))
             {
@@ -72,7 +72,7 @@ namespace EZLogger.Appenders
                 _writeQueue.ForceEnqueue(formattedMessage);
             }
         }
-        
+
         private string FormatMessage(LogMessage message)
         {
             return StringBuilderPool.Build(sb =>
@@ -85,7 +85,7 @@ namespace EZLogger.Appenders
                 sb.Append(message.Tag);
                 sb.Append("] ");
                 sb.Append(message.Message);
-                
+
                 // 添加堆栈跟踪信息
                 if (!string.IsNullOrEmpty(message.StackTrace))
                 {
@@ -94,7 +94,7 @@ namespace EZLogger.Appenders
                 }
             });
         }
-        
+
         private void CreateLogDirectory()
         {
             string logPath = GetLogDirectoryPath();
@@ -103,7 +103,7 @@ namespace EZLogger.Appenders
                 Directory.CreateDirectory(logPath);
             }
         }
-        
+
         private string GetLogDirectoryPath()
         {
 #if UNITY_2018_1_OR_NEWER
@@ -112,7 +112,7 @@ namespace EZLogger.Appenders
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Logs");
 #endif
         }
-        
+
         private void OpenLogFile()
         {
             try
@@ -120,10 +120,10 @@ namespace EZLogger.Appenders
                 string logDir = GetLogDirectoryPath();
                 string fileName = string.Format(_config.FileNameTemplate, DateTime.Now);
                 _currentFilePath = Path.Combine(logDir, fileName);
-                
+
                 _fileStream = new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
                 _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
-                
+
                 // 写入启动标记
                 _streamWriter.WriteLine($"[!@#]{DateTime.Now:HH:mm:ss:fff} [INFO] [FileAppender] Log started");
                 _streamWriter.Flush();
@@ -133,7 +133,7 @@ namespace EZLogger.Appenders
                 HandleInternalError(ex);
             }
         }
-        
+
         private void WriteThreadProc()
         {
             while (_isWriteThreadRunning)
@@ -154,11 +154,11 @@ namespace EZLogger.Appenders
                     HandleInternalError(ex);
                 }
             }
-            
+
             // 写入剩余的消息
             FlushRemainingMessages();
         }
-        
+
         private void WriteToFile(string message)
         {
             lock (_fileLock)
@@ -179,7 +179,7 @@ namespace EZLogger.Appenders
                 }
             }
         }
-        
+
         private void FlushRemainingMessages()
         {
             var remaining = _writeQueue.DequeueBatch(1000);
@@ -188,12 +188,12 @@ namespace EZLogger.Appenders
                 WriteToFile(message);
             }
         }
-        
+
         private void CheckFileSize(object state)
         {
             if (_currentFilePath == null || !File.Exists(_currentFilePath))
                 return;
-                
+
             try
             {
                 var fileInfo = new FileInfo(_currentFilePath);
@@ -207,7 +207,7 @@ namespace EZLogger.Appenders
                 HandleInternalError(ex);
             }
         }
-        
+
         private void TrimLogFile()
         {
             lock (_fileLock)
@@ -216,32 +216,32 @@ namespace EZLogger.Appenders
                 {
                     // 读取文件内容
                     _streamWriter?.Flush();
-                    
+
                     byte[] fileContent;
                     using (var readStream = new FileStream(_currentFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         fileContent = new byte[readStream.Length];
                         readStream.Read(fileContent, 0, fileContent.Length);
                     }
-                    
+
                     if (fileContent.Length > _config.KeepSize)
                     {
                         // 保留后面的部分
                         long trimSize = fileContent.Length - _config.KeepSize;
                         byte[] newContent = new byte[_config.KeepSize];
                         Array.Copy(fileContent, trimSize, newContent, 0, _config.KeepSize);
-                        
+
                         // 关闭当前流
                         _streamWriter?.Close();
                         _fileStream?.Close();
-                        
+
                         // 写入新内容
                         File.WriteAllBytes(_currentFilePath, newContent);
-                        
+
                         // 重新打开文件
                         _fileStream = new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
                         _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
-                        
+
                         // 记录裁剪操作
                         string trimMessage = $"[!@#]{DateTime.Now:HH:mm:ss:fff} [INFO] [FileAppender] File trimmed, removed {trimSize} bytes";
                         _streamWriter.WriteLine(trimMessage);
@@ -263,7 +263,7 @@ namespace EZLogger.Appenders
                 }
             }
         }
-        
+
         protected override void FlushCore()
         {
             // 等待写入队列清空
@@ -273,7 +273,7 @@ namespace EZLogger.Appenders
                 Thread.Sleep(10);
                 waitCount++;
             }
-            
+
             // 刷新文件流
             lock (_fileLock)
             {
@@ -288,17 +288,17 @@ namespace EZLogger.Appenders
                 }
             }
         }
-        
+
         protected override void DisposeCore()
         {
             // 停止大小检查定时器
             _sizeCheckTimer?.Dispose();
             _sizeCheckTimer = null;
-            
+
             // 停止写入线程
             _isWriteThreadRunning = false;
             _writeThread?.Join(1000);
-            
+
             // 关闭文件流
             lock (_fileLock)
             {
@@ -319,7 +319,7 @@ namespace EZLogger.Appenders
                     _fileStream = null;
                 }
             }
-            
+
             _writeQueue?.Clear();
             _writeQueue = null;
         }

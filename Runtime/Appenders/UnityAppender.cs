@@ -8,18 +8,18 @@ namespace EZLogger.Appenders
     public class UnityAppender : LogAppenderBase
     {
         public override string Name => "Unity Console";
-        
+
         /// <summary>Unity控制台输出器必须同步，以保证与Unity原生Debug API的顺序一致</summary>
         public override bool SupportsAsyncWrite => false;
-        
+
         private UnityConsoleConfig _config;
         private StringBuilder _stringBuilder;
-        
+
         protected override void InitializeCore(object config)
         {
             _config = config as UnityConsoleConfig ?? new UnityConsoleConfig();
             _stringBuilder = new StringBuilder(256);
-            
+
             // 设置支持的级别
             SupportedLevels = LogLevel.All;
             if (_config.MinLevel != LogLevel.None)
@@ -35,7 +35,7 @@ namespace EZLogger.Appenders
                 }
             }
         }
-        
+
         protected override void WriteLogCore(LogMessage message)
         {
 #if UNITY_2018_1_OR_NEWER
@@ -65,43 +65,43 @@ namespace EZLogger.Appenders
             }
 #endif
         }
-        
+
         private string FormatMessage(LogMessage message)
         {
             _stringBuilder.Clear();
-            
+
             if (_config.EnableColors)
             {
                 _stringBuilder.Append($"<color={message.Level.GetUnityColor()}>");
             }
-            
+
             // 添加帧数信息
             if (_config.ShowFrameCount && message.FrameCount > 0)
             {
                 _stringBuilder.Append($"[FRAME:{message.FrameCount}]");
             }
-            
+
             // 添加线程ID
             if (_config.ShowThreadId)
             {
                 _stringBuilder.Append($"[T:{message.ThreadId}]");
             }
-            
+
             // 添加标签
             _stringBuilder.Append($"[{message.Tag}]");
-            
+
             if (_config.EnableColors)
             {
                 _stringBuilder.Append("</color>");
             }
-            
+
             // 添加消息内容
             _stringBuilder.Append(" ");
             _stringBuilder.Append(message.Message);
-            
+
             return _stringBuilder.ToString();
         }
-        
+
         protected override void DisposeCore()
         {
             _stringBuilder = null;
