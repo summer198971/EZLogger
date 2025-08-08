@@ -1,0 +1,224 @@
+---
+description: "EZ Logger项目中.meta文件管理的最佳实践"
+globs: "*.meta,package.json,*.mdc"
+---
+
+# EZ Logger .meta文件管理规范
+
+基于实际开发中遇到的"has no meta file"问题的解决经验。
+
+## 🎯 核心原则
+
+### 1. 所有Unity需要的文件都必须有对应的.meta文件
+```
+文件结构:
+Runtime/                     # 文件夹
+├── Runtime.meta            # ✅ 文件夹的meta文件
+├── Core/                   # 子文件夹  
+│   ├── Core.meta           # ✅ 子文件夹的meta文件
+│   ├── LogLevel.cs         # C#文件
+│   └── LogLevel.cs.meta    # ✅ C#文件的meta文件
+└── EZLogger.Runtime.asmdef # Assembly Definition
+    └── EZLogger.Runtime.asmdef.meta  # ✅ asmdef的meta文件
+```
+
+### 2. package.json中必须明确列出所有.meta文件
+```json
+{
+  "files": [
+    "Runtime/**/*",          // 包含Runtime下所有文件
+    "Runtime.meta",          // ⚠️ 必须单独指定文件夹的meta
+    "Editor/**/*",
+    "Editor.meta",           // ⚠️ 必须单独指定文件夹的meta
+    "Tests/**/*", 
+    "Tests.meta",            // ⚠️ 必须单独指定文件夹的meta
+    "package.json",
+    "package.json.meta"      // ⚠️ 连package.json都需要meta
+  ]
+}
+```
+
+## 🚨 常见错误模式
+
+### 错误1: 忘记文件夹级别的.meta文件
+```
+❌ 错误:
+"files": ["Runtime/**/*"]  // 不包含Runtime.meta
+
+✅ 正确:
+"files": [
+  "Runtime/**/*",
+  "Runtime.meta"           // 显式包含文件夹meta
+]
+```
+
+### 错误2: 通配符匹配不够精确
+```
+❌ 错误:
+"files": ["*.md", "*.json"]  // 可能包含不需要的文件
+
+✅ 正确:
+"files": [
+  "README.md",
+  "README.md.meta",
+  "CHANGELOG.md", 
+  "CHANGELOG.md.meta",
+  "LICENSE.md",
+  "LICENSE.md.meta",
+  "package.json",
+  "package.json.meta"
+]
+```
+
+## 🔍 检查方法
+
+### 1. 本地验证
+```bash
+# 检查所有被Git跟踪的.meta文件
+git ls-files | grep -E "\.(meta)$"
+
+# 应该看到所有重要文件的meta文件:
+# Runtime.meta
+# Editor.meta
+# Tests.meta
+# README.md.meta
+# CHANGELOG.md.meta
+# LICENSE.md.meta
+# package.json.meta
+```
+
+### 2. Unity项目中测试
+在干净的Unity项目中通过Package Manager安装，检查Console是否有:
+```
+Asset Packages/com.ezgame.logger/XXX has no meta file
+```
+
+### 3. 包内容验证
+使用Git归档验证包内容:
+```bash
+git archive --format=zip HEAD -o test-package.zip
+unzip -l test-package.zip | grep -E "\.(meta)$"
+```
+
+## 📋 EZ Logger标准配置
+
+### 完整的files字段配置
+```json
+{
+  "name": "com.ezgame.logger",
+  "version": "1.0.4",
+  "files": [
+    "Runtime/**/*",
+    "Runtime.meta",
+    "Editor/**/*", 
+    "Editor.meta",
+    "Tests/**/*",
+    "Tests.meta",
+    "Samples~/**/*",
+    "Documentation~/**/*",
+    "README.md",
+    "README.md.meta",
+    "CHANGELOG.md",
+    "CHANGELOG.md.meta", 
+    "LICENSE.md",
+    "LICENSE.md.meta",
+    "package.json",
+    "package.json.meta"
+  ]
+}
+```
+
+### 必须存在的.meta文件清单
+```
+项目根目录:
+├── Runtime.meta              # ✅ Runtime文件夹
+├── Editor.meta               # ✅ Editor文件夹  
+├── Tests.meta                # ✅ Tests文件夹
+├── README.md.meta            # ✅ README文档
+├── CHANGELOG.md.meta         # ✅ 更新日志
+├── LICENSE.md.meta           # ✅ 许可证
+└── package.json.meta         # ✅ 包定义文件
+
+Runtime子目录:
+├── Runtime/Core.meta         # ✅ Core子文件夹
+├── Runtime/Utils.meta        # ✅ Utils子文件夹
+├── Runtime/Appenders.meta    # ✅ Appenders子文件夹
+└── Runtime/EZLogger.Runtime.asmdef.meta  # ✅ Assembly Definition
+
+Editor子目录:
+└── Editor/EZLogger.Editor.asmdef.meta    # ✅ Editor Assembly Definition
+
+Tests子目录:
+├── Tests/Runtime.meta        # ✅ Tests Runtime子文件夹
+├── Tests/Editor.meta         # ✅ Tests Editor子文件夹
+├── Tests/Runtime/EZLogger.Tests.asmdef.meta      # ✅ Tests Runtime asmdef
+└── Tests/Editor/EZLogger.Editor.Tests.asmdef.meta # ✅ Tests Editor asmdef
+```
+
+## 🛠️ 故障排除
+
+### 如果Unity仍然报告missing meta file:
+
+1. **清理Unity缓存**:
+   ```bash
+   # 删除Unity的Package缓存
+   rm -rf ~/Library/Unity/Asset\ Store-5.x/
+   ```
+
+2. **重新安装包**:
+   - 在Package Manager中移除包
+   - 重新添加Git URL
+
+3. **验证Git跟踪**:
+   ```bash
+   # 确保所有meta文件都被Git跟踪
+   git add *.meta **/*.meta
+   git commit -m "确保所有meta文件被跟踪"
+   ```
+
+4. **升级版本号**:
+   - 更新package.json版本号
+   - 创建新的Git标签
+   - 强制Unity重新下载
+
+## ⚡ 自动化检查脚本
+
+```bash
+#!/bin/bash
+# check-meta-files.sh
+
+echo "🔍 检查EZ Logger项目的.meta文件完整性..."
+
+# 检查关键文件夹的meta文件
+folders=("Runtime" "Editor" "Tests")
+for folder in "${folders[@]}"; do
+    if [ ! -f "${folder}.meta" ]; then
+        echo "❌ 缺失: ${folder}.meta"
+        exit 1
+    else
+        echo "✅ 存在: ${folder}.meta"
+    fi
+done
+
+# 检查关键文档的meta文件  
+files=("README.md" "CHANGELOG.md" "LICENSE.md" "package.json")
+for file in "${files[@]}"; do
+    if [ ! -f "${file}.meta" ]; then
+        echo "❌ 缺失: ${file}.meta"
+        exit 1
+    else
+        echo "✅ 存在: ${file}.meta"
+    fi
+done
+
+echo "🎉 所有必要的.meta文件都存在!"
+```
+
+## 📝 提交检查清单
+
+发布前必须确认:
+- [ ] 所有文件夹都有对应的.meta文件
+- [ ] 所有重要文档都有对应的.meta文件  
+- [ ] package.json的files字段包含所有.meta文件
+- [ ] Git跟踪所有必要的.meta文件
+- [ ] 在干净Unity项目中测试安装无警告

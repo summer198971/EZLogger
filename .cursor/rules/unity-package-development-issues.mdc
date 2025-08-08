@@ -1,0 +1,274 @@
+---
+description: "Unity Package开发中的常见问题和解决方案"
+alwaysApply: true
+---
+
+# Unity Package 开发问题总结与解决方案
+
+基于EZ Logger项目的开发经验，总结常见问题和最佳实践。
+
+## 🚨 Unity Package Manager 警告问题
+
+### 问题1: "has no meta file" 警告
+**症状**: 
+```
+Asset Packages/com.example.package/filename has no meta file, but it's in an immutable folder. The asset will be ignored.
+```
+
+**根本原因**:
+1. 开发工具文件被包含在Unity Package中
+2. 构建配置文件被Git跟踪并包含在分发中
+3. .meta文件在package.json的files字段中未明确指定
+
+**解决方案**:
+1. **四层文件过滤保护**:
+   - `.gitignore` - 防止本地跟踪不需要的文件
+   - `.gitattributes` - 控制Git导出行为
+   - `.npmignore` - NPM风格的包管理过滤
+   - `package.json` files字段 - 精确控制包含文件
+
+2. **开发工具隔离**:
+   ```bash
+   # 将开发工具移至专门目录
+   DevTools/
+   ├── Scripts/
+   │   ├── build-package.sh
+   │   └── validate-package.sh
+   └── GitHub-Upload-Instructions.md
+   ```
+
+3. **明确指定.meta文件**:
+   ```json
+   {
+     "files": [
+       "Runtime/**/*",
+       "Runtime.meta",
+       "Editor/**/*", 
+       "Editor.meta",
+       "Tests/**/*",
+       "Tests.meta",
+       "README.md",
+       "README.md.meta",
+       "package.json",
+       "package.json.meta"
+     ]
+   }
+   ```
+
+### 问题2: 构建配置文件污染
+**症状**: package-build.json等构建文件出现在Unity Package中
+
+**解决方案**:
+```bash
+# 从Git跟踪中移除
+git rm --cached package-build.json package-build.json.meta
+
+# 添加到.gitignore
+echo "package-build.json" >> .gitignore
+echo "package-build.json.meta" >> .gitignore
+```
+
+## 📅 版本管理问题
+
+### 问题3: 错误的日期格式
+**症状**: CHANGELOG.md中使用了错误的年份或日期
+
+**解决方案**:
+```bash
+# 始终检查系统日期
+date
+# 输出: 2025年 8月 8日 星期五
+
+# CHANGELOG.md格式
+## [1.0.x] - 2025-08-08
+```
+
+**预防措施**:
+- 发布前双重检查日期
+- 使用ISO格式: YYYY-MM-DD
+
+## 🔧 Git 工作流问题
+
+### 问题4: 分支管理混乱
+**症状**: 在错误分支上提交改动
+
+**最佳实践**:
+```bash
+# 检查当前分支
+git branch -a
+
+# 功能开发使用特性分支
+git checkout -b feature/unity-package-fixes
+
+# 完成后合并到主分支
+git checkout master
+git merge feature/unity-package-fixes
+git branch -d feature/unity-package-fixes
+```
+
+## 📦 Package.json 配置问题
+
+### 问题5: files字段过于宽泛
+**错误做法**:
+```json
+{
+  "files": ["*.md", "*.json"]  // 包含了不需要的文件
+}
+```
+
+**正确做法**:
+```json
+{
+  "files": [
+    "Runtime/**/*",
+    "Runtime.meta",
+    "Editor/**/*", 
+    "Editor.meta",
+    "Tests/**/*",
+    "Tests.meta",
+    "Samples~/**/*",
+    "Documentation~/**/*",
+    "README.md",
+    "README.md.meta",
+    "CHANGELOG.md", 
+    "CHANGELOG.md.meta",
+    "LICENSE.md",
+    "LICENSE.md.meta",
+    "package.json",
+    "package.json.meta"
+  ]
+}
+```
+
+## 🛡️ 完整的保护配置模板
+
+### .gitignore
+```
+# Unity generated files
+*.tmp
+*.temp
+Temp/
+Library/
+Logs/
+
+# Build outputs  
+Build/
+Builds/
+
+# Development tools (not part of Unity Package)
+DevTools/
+
+# Build configuration files
+package-build.json
+package-build.json.meta
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.cache
+```
+
+### .gitattributes
+```
+# Unity Package Manager configuration
+DevTools/ export-ignore
+Build/ export-ignore
+.cursor/ export-ignore
+package-build.json export-ignore
+package-build.json.meta export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+.npmignore export-ignore
+```
+
+### .npmignore
+```
+# 排除开发工具文件
+DevTools/
+Build/
+.cursor/
+
+# 排除构建配置文件
+package-build.json
+package-build.json.meta
+
+# 排除Git相关文件
+.git/
+.gitignore
+.gitattributes
+.npmignore
+
+# 排除临时文件
+*.log
+.DS_Store
+Thumbs.db
+```
+
+## 🔍 验证清单
+
+发布Unity Package前必须检查:
+
+1. **文件清理**:
+   ```bash
+   # 检查Git跟踪的文件
+   git ls-files | grep -E "(build|dev|temp)"
+   
+   # 应该没有输出，如有则需要清理
+   ```
+
+2. **meta文件完整性**:
+   ```bash
+   # 检查重要文件的meta文件
+   ls -la *.meta
+   ls -la Runtime.meta Editor.meta Tests.meta
+   ```
+
+3. **版本一致性**:
+   - package.json中的version
+   - CHANGELOG.md中的版本
+   - Git标签
+
+4. **日期正确性**:
+   ```bash
+   date  # 确认当前日期
+   grep -n "202[0-9]-" CHANGELOG.md  # 检查版本日期
+   ```
+
+## 🚀 发布流程
+
+1. **开发**:
+   ```bash
+   git checkout -b feature/new-feature
+   # 开发和测试
+   ```
+
+2. **版本准备**:
+   ```bash
+   # 更新版本号
+   # 更新CHANGELOG.md (使用正确日期)
+   # 检查package.json files字段
+   ```
+
+3. **测试验证**:
+   ```bash
+   # 本地Unity项目测试安装
+   # 检查是否有警告
+   ```
+
+4. **发布**:
+   ```bash
+   git checkout master
+   git merge feature/new-feature
+   git tag -a "v1.0.x" -m "版本描述"
+   git push origin master --tags
+   ```
+
+## ⚠️ 特别注意
+
+- **永远不要**将开发工具文件直接放在包根目录
+- **始终验证**Unity Package Manager安装结果
+- **多层保护**比单一方法更可靠
+- **版本发布前**必须在干净的Unity项目中测试安装
