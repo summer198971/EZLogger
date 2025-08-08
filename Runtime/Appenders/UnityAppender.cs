@@ -9,6 +9,9 @@ namespace EZLogger.Appenders
     {
         public override string Name => "Unity Console";
         
+        /// <summary>Unity控制台输出器必须同步，以保证与Unity原生Debug API的顺序一致</summary>
+        public override bool SupportsAsyncWrite => false;
+        
         private UnityConsoleConfig _config;
         private StringBuilder _stringBuilder;
         

@@ -14,6 +14,9 @@ namespace EZLogger.Appenders
     {
         public override string Name => "File";
         
+        /// <summary>文件输出器支持异步写入，避免IO阻塞主线程</summary>
+        public override bool SupportsAsyncWrite => true;
+        
         private FileOutputConfig _config;
         private FileStream _fileStream;
         private StreamWriter _streamWriter;

@@ -16,6 +16,9 @@ namespace EZLogger.Appenders
         /// <summary>支持的日志级别</summary>
         LogLevel SupportedLevels { get; set; }
         
+        /// <summary>是否支持异步写入（文件输出器为true，控制台输出器为false）</summary>
+        bool SupportsAsyncWrite { get; }
+        
         /// <summary>
         /// 写入日志消息
         /// </summary>
@@ -47,6 +50,9 @@ namespace EZLogger.Appenders
         
         /// <summary>支持的日志级别</summary>
         public LogLevel SupportedLevels { get; set; } = LogLevel.All;
+        
+        /// <summary>是否支持异步写入</summary>
+        public abstract bool SupportsAsyncWrite { get; }
         
         /// <summary>是否已初始化</summary>
         protected bool IsInitialized { get; private set; }

@@ -36,7 +36,7 @@ namespace EZLogger
                 _logger.Log(_level, tag, message);
             }
         }
-        
+
         /// <summary>
         /// 带防重复机制的日志记录
         /// </summary>
@@ -100,7 +100,7 @@ namespace EZLogger
         {
             var logMessage = new LogMessage(_level, tag, message,
                 FormatStackTrace(stackTrace), GetCurrentFrameCount());
-            
+
             // 对Error和Exception级别应用防重复机制
             if (_level == LogLevel.Error || _level == LogLevel.Exception)
             {

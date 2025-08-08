@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using EZLogger.Appenders;
 using EZLogger.Utils;
@@ -303,17 +304,20 @@ namespace EZLogger
             return EnabledLevels.Contains(level);
         }
 
-        /// <summary>
+                /// <summary>
         /// 记录日志消息
         /// </summary>
         public void Log(LogMessage message)
         {
             if (!IsLevelEnabled(message.Level))
                 return;
-
+                
+            // 分别处理同步和异步输出器
+            WriteToSyncAppenders(message);
+            
             if (_configuration.EnableAsyncWrite && _isRunning)
             {
-                // 异步写入
+                // 异步写入到支持异步的输出器
                 if (!_logQueue.Enqueue(message))
                 {
                     // 队列已满，强制入队（会丢弃最旧的消息）
@@ -322,8 +326,8 @@ namespace EZLogger
             }
             else
             {
-                // 同步写入
-                WriteToAppenders(message);
+                // 同步写入到支持异步的输出器
+                WriteToAsyncAppenders(message);
             }
         }
 
@@ -414,27 +418,73 @@ namespace EZLogger
             }
         }
 
-        private void WriteToAppenders(LogMessage message)
+        /// <summary>
+        /// 写入到同步输出器（如Unity控制台）
+        /// 这些输出器需要立即执行，以保证与Unity原生API的顺序一致
+        /// </summary>
+        private void WriteToSyncAppenders(LogMessage message)
         {
             ILogAppender[] appenders;
             lock (_appendersLock)
             {
                 if (_appenders.Count == 0)
                     return;
-                appenders = _appenders.ToArray();
+                appenders = _appenders.Where(a => !a.SupportsAsyncWrite).ToArray();
             }
 
             foreach (var appender in appenders)
             {
                 try
                 {
-                    appender?.WriteLog(message);
+                    if (appender.IsEnabled && appender.SupportedLevels.Contains(message.Level))
+                    {
+                        appender.WriteLog(message);
+                    }
                 }
                 catch (Exception ex)
                 {
                     HandleInternalError(ex);
                 }
             }
+        }
+
+        /// <summary>
+        /// 写入到异步输出器（如文件）
+        /// 这些输出器可以在后台线程处理，避免IO阻塞
+        /// </summary>
+        private void WriteToAsyncAppenders(LogMessage message)
+        {
+            ILogAppender[] appenders;
+            lock (_appendersLock)
+            {
+                if (_appenders.Count == 0)
+                    return;
+                appenders = _appenders.Where(a => a.SupportsAsyncWrite).ToArray();
+            }
+
+            foreach (var appender in appenders)
+            {
+                try
+                {
+                    if (appender.IsEnabled && appender.SupportedLevels.Contains(message.Level))
+                    {
+                        appender.WriteLog(message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    HandleInternalError(ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 兼容旧版本的WriteToAppenders方法（用于后台线程）
+        /// </summary>
+        private void WriteToAppenders(LogMessage message)
+        {
+            // 在后台线程中，只处理异步输出器
+            WriteToAsyncAppenders(message);
         }
         #endregion
 
