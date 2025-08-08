@@ -297,16 +297,24 @@ if (EZLog.IsLevelEnabled(LogLevel.Debug))
 EZLog.DLog("AI", $"寻路计算耗时: {pathfindingTime}ms");
 ```
 
-## 🔍 日志级别
+## 🔍 日志级别（与Unity LogType完全对齐）
 
-| 级别 | 用途 | 发布版本 |
-|------|------|----------|
-| Verbose | 非常详细的调试信息 | ❌ |
-| Debug | 一般调试信息 | ❌ |
-| Info | 信息性消息 | ✅ |
-| Warning | 警告消息 | ✅ |
-| Error | 错误消息 | ✅ |
-| Fatal | 致命错误 | ✅ |
+| EZ Logger级别 | Unity LogType | 用途 | 开发版本 | 发布版本 |
+|---------------|---------------|------|----------|----------|
+| `LogLevel.Log` | `LogType.Log` | 普通日志消息 | ✅ | ✅ |
+| `LogLevel.Warning` | `LogType.Warning` | 警告消息 | ✅ | ✅ |
+| `LogLevel.Assert` | `LogType.Assert` | 断言失败 | ✅ | ❌ |
+| `LogLevel.Error` | `LogType.Error` | 错误消息 | ✅ | ✅ |
+| `LogLevel.Exception` | `LogType.Exception` | 异常信息 | ✅ | ✅ |
+
+### Unity filterLogType 兼容性
+
+| Unity设置 | EZ Logger对应方法 | 显示级别 |
+|-----------|-------------------|----------|
+| `filterLogType = LogType.Log` | `EZLog.EnableAll()` | 显示所有级别 |
+| `filterLogType = LogType.Warning` | `EZLog.SetWarningAndAbove()` | Warning + Assert + Error + Exception |
+| `filterLogType = LogType.Error` | `EZLog.SetErrorAndAbove()` | Error + Exception |
+| `filterLogType = LogType.Exception` | `EZLog.SetEnabledLevels(LogLevel.Exception)` | 仅Exception |
 
 ## 🛠️ 开发工具
 
