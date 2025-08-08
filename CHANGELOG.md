@@ -2,11 +2,25 @@
 
 所有重要更改都将记录在此文件中。
 
+## [1.0.1] - 2024-12-28
+
+### 修复
+- 🔧 修复Unity Package Manager安装时的meta文件警告
+- 📁 重组项目结构，将开发工具移至DevTools目录
+- 🚫 排除.cursor、DevTools、Build目录在Unity Package分发之外
+- 🔗 更新package.json中的GitHub仓库URL
+- 📋 添加.gitattributes文件进行包分发控制
+
+### 改进
+- 📦 优化Unity Package结构，提供更干净的安装体验
+- 🛠️ 修正构建脚本路径问题
+- 📖 更新安装说明和文档
+
 ## [1.0.0] - 2024-01-XX
 
 ### 新增
 - 🎉 首次发布EZ Logger
-- ✨ 支持6个日志级别 (Verbose, Debug, Info, Warning, Error, Fatal)
+- ✨ 支持5个日志级别，与Unity LogType完全对齐 (Log, Warning, Assert, Error, Exception)
 - 🚀 零GC分配的性能模式
 - 📁 异步文件输出支持
 - 🔄 自动文件轮转功能
