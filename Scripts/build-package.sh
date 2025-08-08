@@ -81,7 +81,7 @@ cat > "$BUILD_DIR/INSTALL.md" << EOF
 ## 方法2: Git URL安装（如果已推送到Git）
 1. 打开Unity Package Manager
 2. 点击"+"按钮，选择"Add package from git URL"
-3. 输入: https://github.com/your-username/EZLogger.git
+3. 输入: https://github.com/summer198971/EZLogger.git
 4. 点击Add
 
 ## 方法3: 本地路径安装
@@ -112,5 +112,5 @@ echo "📖 安装说明: $BUILD_DIR/INSTALL.md"
 echo ""
 echo "🔗 分发方式:"
 echo "1. 直接分发zip文件"
-echo "2. 从Git仓库安装: https://github.com/your-username/EZLogger.git"
+echo "2. 从Git仓库安装: https://github.com/summer198971/EZLogger.git"
 echo "3. 本地路径安装Package"
