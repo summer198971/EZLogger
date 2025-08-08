@@ -148,11 +148,7 @@ namespace EZLogger
 
         private int GetCurrentFrameCount()
         {
-#if UNITY_2018_1_OR_NEWER
             return UnityEngine.Time.frameCount;
-#else
-            return 0;
-#endif
         }
     }
 

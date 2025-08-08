@@ -36,9 +36,8 @@ namespace EZLogger.Appenders
             }
         }
 
-        protected override void WriteLogCore(LogMessage message)
+                protected override void WriteLogCore(LogMessage message)
         {
-#if UNITY_2018_1_OR_NEWER
             string formattedMessage = FormatMessage(message);
             
             // 直接使用Unity LogType，完全对齐
@@ -63,7 +62,6 @@ namespace EZLogger.Appenders
                     UnityEngine.Debug.Log(formattedMessage);
                     break;
             }
-#endif
         }
 
         private string FormatMessage(LogMessage message)

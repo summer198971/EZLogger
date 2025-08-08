@@ -487,20 +487,12 @@ namespace EZLogger
         #region 工具方法
         private int GetCurrentFrameCount()
         {
-#if UNITY_2018_1_OR_NEWER
             return UnityEngine.Time.frameCount;
-#else
-            return 0;
-#endif
         }
 
         private void HandleInternalError(Exception ex)
         {
-#if UNITY_2018_1_OR_NEWER
             UnityEngine.Debug.LogError($"[EZLogger] Internal error: {ex.Message}");
-#else
-            Console.WriteLine($"[EZLogger] Internal error: {ex.Message}");
-#endif
         }
         #endregion
 
@@ -550,13 +542,11 @@ namespace EZLogger
         {
             // 默认实现：记录到专门的错误日志文件
             // 实际项目中可以重写此方法实现HTTP上报
-            var errorTag = logLevel == LogLevel.Exception ? "Exception" : "Error";
+                        var errorTag = logLevel == LogLevel.Exception ? "Exception" : "Error";
             Log(LogLevel.Error, $"ServerReport_{errorTag}", message);
-
-#if UNITY_2018_1_OR_NEWER && !UNITY_EDITOR
+            
             // 示例：在实际项目中，这里可以实现HTTP上报逻辑
             // PostToErrorServer(message, logLevel);
-#endif
         }
 
         /// <summary>
