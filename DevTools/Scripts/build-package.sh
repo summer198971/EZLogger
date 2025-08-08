@@ -18,18 +18,18 @@ mkdir -p "$PACKAGE_DIR"
 
 # 2. 复制核心文件
 echo "📁 复制核心文件..."
-cp -r Runtime "$PACKAGE_DIR/"
-cp -r Editor "$PACKAGE_DIR/"
-cp -r Tests "$PACKAGE_DIR/"
-cp -r Samples~ "$PACKAGE_DIR/"
-cp -r Documentation~ "$PACKAGE_DIR/"
+cp -r ../../Runtime "$PACKAGE_DIR/"
+cp -r ../../Editor "$PACKAGE_DIR/"
+cp -r ../../Tests "$PACKAGE_DIR/"
+cp -r ../../Samples~ "$PACKAGE_DIR/"
+cp -r ../../Documentation~ "$PACKAGE_DIR/"
 
 # 3. 复制Package文件
 echo "📄 复制Package文件..."
-cp package.json "$PACKAGE_DIR/"
-cp README.md "$PACKAGE_DIR/"
-cp CHANGELOG.md "$PACKAGE_DIR/"
-cp LICENSE.md "$PACKAGE_DIR/"
+cp ../../package.json "$PACKAGE_DIR/"
+cp ../../README.md "$PACKAGE_DIR/"
+cp ../../CHANGELOG.md "$PACKAGE_DIR/"
+cp ../../LICENSE.md "$PACKAGE_DIR/"
 
 # 4. 清理不需要的文件
 echo "🧹 清理不需要的文件..."
