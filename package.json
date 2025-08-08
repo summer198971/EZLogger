@@ -1,6 +1,6 @@
 {
   "name": "com.ezgame.logger",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "EZ Logger",
   "description": "A high-performance, zero-allocation logging system for Unity with multi-level support and server integration.",
   "unity": "2020.3",
@@ -22,6 +22,15 @@
   },
   "type": "library",
   "hideInEditor": false,
+  "files": [
+    "Runtime/**/*",
+    "Editor/**/*", 
+    "Tests/**/*",
+    "Samples~/**/*",
+    "Documentation~/**/*",
+    "*.md",
+    "*.json"
+  ],
   "dependencies": {},
   "samples": [
     {

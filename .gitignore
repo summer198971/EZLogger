@@ -29,6 +29,9 @@ Thumbs.db
 Build/
 Builds/
 
+# Development tools (not part of Unity Package)
+DevTools/
+
 # Temporary files
 *.log
 *.cache

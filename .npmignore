@@ -1,0 +1,8 @@
+# 排除开发工具文件
+DevTools/
+Build/
+.cursor/
+package-build.json
+*.log
+.DS_Store
+Thumbs.db

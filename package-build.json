@@ -1,5 +1,5 @@
 {
-  "name": "com.summer198971.ezlogger",
+  "name": "com.ezgame.ezlogger",
   "version": "1.0.0",
   "displayName": "EZ Logger",
   "description": "高性能零开销Unity日志库，与Unity LogType完全对齐",

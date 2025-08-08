@@ -2,6 +2,19 @@
 
 所有重要更改都将记录在此文件中。
 
+## [1.0.2] - 2024-12-28
+
+### 修复
+- 🚫 彻底解决Unity Package Manager中DevTools目录警告问题
+- 📋 从Git跟踪中完全移除DevTools目录
+- 📁 添加.npmignore文件进行包管理优化
+- 🔧 在package.json中明确指定包含的文件列表
+- 📝 更新.gitignore以防止DevTools目录再次被跟踪
+
+### 改进
+- 📦 确保Unity Package完全干净，无任何开发工具文件
+- 🛡️ 多层保护防止开发文件进入Unity Package分发
+
 ## [1.0.1] - 2024-12-28
 
 ### 修复
