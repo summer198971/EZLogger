@@ -5,7 +5,7 @@ EZ Logger 是一个为Unity设计的高性能、零分配日志系统，支持�
 ## ✨ 特性
 
 - 🚀 **零GC分配**: 性能模式下确保零垃圾回收分配
-- 📊 **多级别控制**: 支持6个日志级别，可灵活开关
+- 📊 **多级别控制**: 支持5个日志级别，与Unity LogType完全对齐
 - 🔄 **异步写入**: 支持异步文件写入，不阻塞主线程
 - 📁 **文件轮转**: 自动文件大小管理和轮转
 - 🌐 **服务器集成**: 支持日志发送到远程服务器
@@ -20,7 +20,7 @@ EZ Logger 是一个为Unity设计的高性能、零分配日志系统，支持�
 2. 在菜单栏选择 **Window > Package Manager**
 3. 点击左上角的 **+** 按钮
 4. 选择 **Add package from git URL**
-5. 输入仓库URL并点击Add
+5. 输入仓库URL：`https://github.com/summer198971/EZLogger.git` 并点击Add
 
 ### 手动安装
 
@@ -251,14 +251,14 @@ EZLoggerManager.Instance.AddAppender(serverAppender);
 ```csharp
 // 只在Debug模式下记录
 #if DEBUG
-    EZLog.D("Debug", "这只在Debug构建中显示");
+    EZLog.Log?.Log("Debug", "这只在Debug构建中显示");
 #endif
 
 // 运行时级别检查
-if (EZLog.IsLevelEnabled(LogLevel.Verbose))
+if (EZLog.IsLevelEnabled(LogLevel.Log))
 {
     string expensiveDebugInfo = GenerateExpensiveDebugInfo();
-    EZLog.V("Performance", expensiveDebugInfo);
+    EZLog.Log?.Log("Performance", expensiveDebugInfo);
 }
 ```
 
@@ -276,25 +276,25 @@ EZ Logger 在性能模式下确保零GC分配：
 ### 最佳实践
 
 ```csharp
-// ✅ 最佳做法：零开销日志记录
-EZLog.D?.Log("AI", $"寻路计算耗时: {pathfindingTime}ms");
-// 当Debug级别被禁用时，连字符串拼接都不会执行！
+// ✅ 最佳做法：零开销日志记录 - 与Unity LogType对齐
+EZLog.Log?.Log("AI", $"寻路计算耗时: {pathfindingTime}ms");
+// 当Log级别被禁用时，连字符串拼接都不会执行！
 
 // ✅ 零开销的格式化方法
-EZLog.D?.LogFormat("AI", "寻路计算耗时: {0}ms", pathfindingTime);
+EZLog.Log?.LogFormat("AI", "寻路计算耗时: {0}ms", pathfindingTime);
 
 // ✅ 复杂计算的零开销保护
-EZLog.V?.Log("AI", GetComplexAIDebugInfo());
-// GetComplexAIDebugInfo() 只有在Verbose级别启用时才会被调用
+EZLog.Warning?.Log("AI", GetComplexAIDebugInfo());
+// GetComplexAIDebugInfo() 只有在Warning级别启用时才会被调用
 
 // ❌ 避免的做法 - 传统方式仍有开销
-if (EZLog.IsLevelEnabled(LogLevel.Debug))
+if (EZLog.IsLevelEnabled(LogLevel.Log))
 {
-    EZLog.DLog("AI", $"寻路计算耗时: {pathfindingTime}ms");
+    EZLog.LogLog("AI", $"寻路计算耗时: {pathfindingTime}ms");
 }
 
 // ❌ 更要避免的做法 - 总是有开销
-EZLog.DLog("AI", $"寻路计算耗时: {pathfindingTime}ms");
+EZLog.LogLog("AI", $"寻路计算耗时: {pathfindingTime}ms");
 ```
 
 ## 🔍 日志级别（与Unity LogType完全对齐）
