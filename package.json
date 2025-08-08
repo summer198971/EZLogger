@@ -1,0 +1,43 @@
+{
+  "name": "com.ezgame.logger",
+  "version": "1.0.0",
+  "displayName": "EZ Logger",
+  "description": "A high-performance, zero-allocation logging system for Unity with multi-level support and server integration.",
+  "unity": "2020.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "https://github.com/yourusername/ezlogger/wiki",
+  "changelogUrl": "https://github.com/yourusername/ezlogger/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/yourusername/ezlogger/blob/main/LICENSE.md",
+  "keywords": [
+    "logging",
+    "debug",
+    "performance",
+    "unity",
+    "zero-allocation"
+  ],
+  "author": {
+    "name": "EZ Game Studio",
+    "email": "dev@ezgame.com",
+    "url": "https://ezgame.com"
+  },
+  "type": "library",
+  "hideInEditor": false,
+  "dependencies": {},
+  "samples": [
+    {
+      "displayName": "Basic Usage",
+      "description": "Basic logging usage examples",
+      "path": "Samples~/Basic Usage"
+    },
+    {
+      "displayName": "Advanced Configuration",
+      "description": "Advanced configuration examples with custom appenders",
+      "path": "Samples~/Advanced Configuration"
+    },
+    {
+      "displayName": "Custom Appenders",
+      "description": "Examples of creating custom log appenders",
+      "path": "Samples~/Custom Appenders"
+    }
+  ]
+}

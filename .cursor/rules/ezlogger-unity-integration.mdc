@@ -1,0 +1,275 @@
+---
+description: "EZ Logger 与 Unity 集成和兼容性指南"
+globs: "*.cs,*.asmdef,*.json"
+---
+
+# EZ Logger Unity 集成指南
+
+## Unity Package 规范
+
+### 1. Package 结构要求
+EZ Logger 遵循标准的 Unity Package 布局：
+
+```
+EZLogger/
+├── package.json                    # Package 定义文件
+├── README.md                       # 主要文档
+├── CHANGELOG.md                    # 版本变更记录
+├── LICENSE.md                      # 许可证
+├── Runtime/                        # 运行时代码
+│   ├── EZLogger.Runtime.asmdef     # 运行时程序集定义
+│   ├── Core/                       # 核心功能
+│   ├── Appenders/                  # 输出器
+│   └── Utils/                      # 工具类
+├── Editor/                         # 编辑器代码
+│   └── EZLogger.Editor.asmdef      # 编辑器程序集定义
+├── Tests/                          # 测试代码
+│   ├── Runtime/                    # 运行时测试
+│   └── Editor/                     # 编辑器测试
+├── Samples~/                       # 示例代码
+│   ├── Basic Usage/                # 基础使用示例
+│   ├── Advanced Configuration/     # 高级配置示例
+│   ├── Runtime Level Control/      # 运行时级别控制
+│   └── Unity Aligned Usage/        # Unity对齐使用
+└── Documentation~/                 # 额外文档
+    └── migration-guide.md          # 迁移指南
+```
+
+### 2. Assembly Definition 配置
+```json
+// Runtime/EZLogger.Runtime.asmdef
+{
+    "name": "EZLogger.Runtime",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
+```
+
+## Unity LogType 完全对齐
+
+### 1. 级别映射保证
+EZ Logger 与 Unity LogType 的映射关系**绝对不能改变**：
+
+```csharp
+// 这个映射关系是EZ Logger的核心特性，不能修改
+public static UnityEngine.LogType ToUnityLogType(this LogLevel level)
+{
+    return level switch
+    {
+        LogLevel.Log => UnityEngine.LogType.Log,           // 必须对应
+        LogLevel.Warning => UnityEngine.LogType.Warning,   // 必须对应
+        LogLevel.Assert => UnityEngine.LogType.Assert,     // 必须对应
+        LogLevel.Error => UnityEngine.LogType.Error,       // 必须对应
+        LogLevel.Exception => UnityEngine.LogType.Exception, // 必须对应
+        _ => UnityEngine.LogType.Log
+    };
+}
+```
+
+### 2. Unity filterLogType 兼容性
+```csharp
+// EZ Logger的级别控制必须与Unity filterLogType行为一致
+public static void SetWarningAndAbove()
+{
+    // 对应 Debug.unityLogger.filterLogType = LogType.Warning
+    // 显示 Warning + Assert + Error + Exception
+    EnabledLevels = LogLevel.Warning | LogLevel.Assert | LogLevel.Error | LogLevel.Exception;
+}
+```
+
+### 3. Unity Console 集成
+```csharp
+// UnityAppender必须调用正确的Unity Debug方法
+switch (unityLogType)
+{
+    case UnityEngine.LogType.Log:
+        UnityEngine.Debug.Log(formattedMessage);
+        break;
+    case UnityEngine.LogType.Warning:
+        UnityEngine.Debug.LogWarning(formattedMessage);
+        break;
+    case UnityEngine.LogType.Assert:
+        UnityEngine.Debug.LogAssertion(formattedMessage);  // 使用专门的Assert方法
+        break;
+    case UnityEngine.LogType.Error:
+        UnityEngine.Debug.LogError(formattedMessage);
+        break;
+    case UnityEngine.LogType.Exception:
+        UnityEngine.Debug.LogError($"[Exception] {formattedMessage}"); // Exception特殊处理
+        break;
+}
+```
+
+## Unity 生命周期集成
+
+### 1. 应用生命周期处理
+```csharp
+void OnApplicationPause(bool pauseStatus)
+{
+    if (pauseStatus)
+    {
+        // 应用暂停时确保日志被写入
+        EZLoggerManager.Instance.Flush();
+    }
+}
+
+void OnApplicationQuit()
+{
+    // 应用退出时清理资源
+    EZLoggerManager.Instance.Dispose();
+}
+```
+
+### 2. 场景切换处理
+```csharp
+void Awake()
+{
+    // 确保Logger在场景切换时不被销毁
+    if (EZLoggerManager.Instance != null)
+    {
+        DontDestroyOnLoad(EZLoggerManager.Instance.gameObject);
+    }
+}
+```
+
+## Unity 编辑器集成
+
+### 1. 编辑器特定功能
+```csharp
+#if UNITY_EDITOR
+public class EZLoggerEditorWindow : EditorWindow
+{
+    [MenuItem("Tools/EZ Logger/Settings")]
+    public static void ShowWindow()
+    {
+        GetWindow<EZLoggerEditorWindow>("EZ Logger Settings");
+    }
+    
+    void OnGUI()
+    {
+        // 在编辑器中提供可视化配置界面
+        var config = EZLoggerManager.Instance.Configuration;
+        config.GlobalEnabledLevels = (LogLevel)EditorGUILayout.EnumFlagsField(
+            "Enabled Levels", config.GlobalEnabledLevels);
+    }
+}
+#endif
+```
+
+### 2. 构建时处理
+```csharp
+// 根据构建目标自动调整配置
+#if UNITY_EDITOR
+    // 编辑器模式：启用详细日志
+    config = LoggerConfiguration.CreateDevelopment();
+#elif DEVELOPMENT_BUILD
+    // 开发构建：启用大部分日志
+    config = LoggerConfiguration.CreateDevelopment();
+    config.GlobalEnabledLevels = LogLevel.All;
+#else
+    // 发布构建：仅启用重要日志
+    config = LoggerConfiguration.CreateRelease();
+    config.GlobalEnabledLevels = LogLevel.ErrorAndAbove;
+#endif
+```
+
+## Unity 版本兼容性
+
+### 1. 最低版本要求
+```json
+// package.json中指定Unity版本要求
+{
+    "unity": "2019.4",
+    "unityRelease": "0f1"
+}
+```
+
+### 2. 条件编译处理
+```csharp
+// 处理不同Unity版本的API差异
+#if UNITY_2019_4_OR_NEWER
+    // 使用新API
+    Application.quitting += OnApplicationQuitting;
+#else
+    // 使用旧API兼容
+    Application.quitting += () => OnApplicationQuitting();
+#endif
+```
+
+### 3. 平台特定处理
+```csharp
+// 处理不同平台的特殊需求
+#if UNITY_ANDROID
+    // Android特定的日志处理
+    config.FileOutput.LogDirectory = Path.Combine(Application.persistentDataPath, "Logs");
+#elif UNITY_IOS
+    // iOS特定的日志处理
+    config.FileOutput.LogDirectory = Path.Combine(Application.documentsPath, "Logs");
+#elif UNITY_STANDALONE
+    // PC平台的日志处理
+    config.FileOutput.LogDirectory = Path.Combine(Application.dataPath, "../Logs");
+#endif
+```
+
+## Unity 工具链集成
+
+### 1. Unity Profiler 集成
+```csharp
+#if ENABLE_PROFILER
+using Unity.Profiling;
+
+public class EZLoggerManager
+{
+    private static readonly ProfilerMarker s_LogMarker = new ProfilerMarker("EZLogger.Log");
+    
+    public void Log(LogMessage message)
+    {
+        using (s_LogMarker.Auto())
+        {
+            // 日志处理逻辑
+        }
+    }
+}
+#endif
+```
+
+### 2. Unity Analytics 兼容
+```csharp
+// 可选的Analytics集成
+#if UNITY_ANALYTICS
+void LogErrorToAnalytics(LogMessage message)
+{
+    if (message.Level == LogLevel.Error || message.Level == LogLevel.Exception)
+    {
+        Analytics.CustomEvent("LogError", new Dictionary<string, object>
+        {
+            {"level", message.Level.ToString()},
+            {"tag", message.Tag},
+            {"message", message.Message}
+        });
+    }
+}
+#endif
+```
+
+## 最佳实践
+
+### 1. Unity 项目集成步骤
+1. 将 EZLogger 包添加到 `Packages` 目录
+2. 在启动场景创建 Logger 初始化脚本
+3. 根据项目需求配置 Logger
+4. 在 PlayerSettings 中设置适当的 Scripting Define Symbols
+
+### 2. 性能优化建议
+- 在 Release 构建中禁用详细日志级别
+- 使用异步文件写入避免阻塞主线程
+- 定期清理旧日志文件避免存储空间问题
+- 在移动平台上限制日志文件大小

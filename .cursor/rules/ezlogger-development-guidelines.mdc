@@ -1,0 +1,98 @@
+---
+globs: *.cs
+description: "EZ Logger C#开发规范和最佳实践"
+---
+
+# EZ Logger 开发规范
+
+## C# 编码规范
+
+### 1. 命名约定
+- **类名**: PascalCase (如: `EZLoggerManager`, `ConditionalLogger`)
+- **方法名**: PascalCase (如: `Log`, `LogFormat`, `IsLevelEnabled`)
+- **属性名**: PascalCase (如: `EnabledLevels`, `Configuration`)
+- **字段名**: camelCase with underscore prefix for private fields (如: `_cachedL`, `_lastCheckedLevels`)
+- **枚举值**: PascalCase (如: `LogLevel.Log`, `LogLevel.Warning`)
+
+### 2. Unity LogType对齐原则
+- **必须保持与Unity LogType的完全对应关系**:
+  - `LogLevel.Log` ↔ `UnityEngine.LogType.Log`
+  - `LogLevel.Warning` ↔ `UnityEngine.LogType.Warning`
+  - `LogLevel.Assert` ↔ `UnityEngine.LogType.Assert`
+  - `LogLevel.Error` ↔ `UnityEngine.LogType.Error`
+  - `LogLevel.Exception` ↔ `UnityEngine.LogType.Exception`
+
+### 3. 零开销设计要求
+- **禁用级别时必须零开销**: 使用 `?.` 操作符确保禁用时连参数都不计算
+- **缓存机制**: 条件日志记录器必须缓存，避免重复创建
+- **性能优化**: 使用 `[MethodImpl(MethodImplOptions.AggressiveInlining)]` 标记关键方法
+
+### 4. 文档注释规范
+```csharp
+/// <summary>
+/// 方法功能描述（必填）
+/// </summary>
+/// <param name="参数名">参数说明（如有参数）</param>
+/// <returns>返回值说明（如有返回值）</returns>
+```
+
+### 5. 错误处理
+- 使用适当的日志级别记录错误
+- 关键错误必须使用 `LogLevel.Error` 或 `LogLevel.Exception`
+- 避免在日志系统内部产生递归日志
+
+## 特殊设计模式
+
+### 1. 条件日志记录器模式
+```csharp
+// 正确的零开销实现
+public static ConditionalLogger Log
+{
+    get
+    {
+        var currentLevels = EZLoggerManager.Instance.EnabledLevels;
+        if (currentLevels != _lastCheckedLevels)
+        {
+            RefreshCachedLoggers(currentLevels);
+        }
+        return _cachedL; // 禁用时返回null
+    }
+}
+```
+
+### 2. Unity兼容性模式
+```csharp
+// 在UnityAppender中直接使用Unity的对应方法
+switch (unityLogType)
+{
+    case UnityEngine.LogType.Error:
+        UnityEngine.Debug.LogError(formattedMessage);
+        break;
+    case UnityEngine.LogType.Warning:
+        UnityEngine.Debug.LogWarning(formattedMessage);
+        break;
+    // ...
+}
+```
+
+### 3. 线程安全要求
+- 使用 `ThreadSafeQueue` 处理异步日志
+- 关键共享状态使用适当的同步机制
+- 避免在多线程环境中的竞态条件
+
+## 测试要求
+
+### 1. 性能测试
+- 必须验证禁用级别时的零开销特性
+- 测试大量日志输出的性能表现
+- 验证内存分配情况
+
+### 2. Unity兼容性测试
+- 验证与Unity LogType的完全对应
+- 测试filterLogType行为的一致性
+- 确保在不同Unity版本下的兼容性
+
+### 3. 功能测试
+- 运行时级别控制的即时生效
+- 多种输出器的协同工作
+- 异常情况的正确处理

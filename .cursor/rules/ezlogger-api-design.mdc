@@ -1,0 +1,159 @@
+---
+description: "EZ Logger API设计原则和使用模式指南"
+---
+
+# EZ Logger API 设计指南
+
+## API 层次结构
+
+### 1. 零开销API（主推API）
+这是EZ Logger的核心特性，当日志级别被禁用时完全零开销。
+
+```csharp
+// 基础使用模式
+EZLog.Log?.Log("tag", "message");
+EZLog.Warning?.Log("tag", "message");
+
+// 格式化模式
+EZLog.Log?.LogFormat("tag", "Format: {0}", value);
+
+// 对象标签模式
+EZLog.Error?.Log(this, "错误信息");
+```
+
+**设计要点**:
+- 使用 `?.` 确保禁用时零开销
+- 返回 `ConditionalLogger` 或 `null`
+- 缓存机制避免重复创建
+
+### 2. 传统API（向下兼容）
+提供类似传统日志库的接口，但无法达到零开销。
+
+```csharp
+// 直接调用方式
+EZLog.LogLog("tag", "message");
+EZLog.LogWarning("tag", "message");
+
+// 级别检查方式
+if (EZLog.IsLevelEnabled(LogLevel.Log))
+{
+    EZLog.LogLog("tag", expensiveOperation());
+}
+```
+
+### 3. 级别控制API
+支持运行时动态调整日志级别，与Unity filterLogType完全对齐。
+
+```csharp
+// Unity filterLogType对应
+EZLog.EnableAll();           // filterLogType = LogType.Log
+EZLog.SetWarningAndAbove();  // filterLogType = LogType.Warning
+EZLog.SetErrorAndAbove();    // filterLogType = LogType.Error
+
+// 精细控制
+EZLog.EnableLevel(LogLevel.Assert);
+EZLog.DisableLevel(LogLevel.Log);
+EZLog.ToggleLevel(LogLevel.Warning);
+```
+
+## Unity LogType 映射表
+
+| EZ Logger | Unity LogType | Unity Debug方法 | 使用场景 |
+|-----------|---------------|----------------|----------|
+| `LogLevel.Log` | `LogType.Log` | `Debug.Log()` | 普通日志消息 |
+| `LogLevel.Warning` | `LogType.Warning` | `Debug.LogWarning()` | 警告消息 |
+| `LogLevel.Assert` | `LogType.Assert` | `Debug.LogAssertion()` | 断言失败 |
+| `LogLevel.Error` | `LogType.Error` | `Debug.LogError()` | 错误消息 |
+| `LogLevel.Exception` | `LogType.Exception` | `Debug.LogException()` | 异常信息 |
+
+## 扩展性设计
+
+### 1. 输出器接口
+实现 `ILogAppender` 接口来创建自定义输出器：
+
+```csharp
+public interface ILogAppender
+{
+    void Initialize(object config);
+    void Append(LogMessage message);
+    void Release();
+}
+```
+
+### 2. 配置系统
+使用 `LoggerConfiguration` 进行灵活配置：
+
+```csharp
+var config = LoggerConfiguration.CreateDevelopment();
+config.GlobalEnabledLevels = LogLevel.All;
+config.PerformanceMode = false;
+EZLoggerManager.Instance.Configuration = config;
+```
+
+## 最佳实践模式
+
+### 1. 高性能场景
+```csharp
+// ✅ 推荐：零开销方式
+EZLog.Log?.Log("Performance", GetComplexDebugInfo());
+
+// ❌ 避免：手动检查（代码冗余）
+if (EZLog.IsLevelEnabled(LogLevel.Log))
+{
+    EZLog.LogLog("Performance", GetComplexDebugInfo());
+}
+```
+
+### 2. 异常处理
+```csharp
+try
+{
+    // 业务代码
+}
+catch (Exception ex)
+{
+    // ✅ 推荐：零开销异常记录
+    EZLog.Exception?.Log("Module", ex.Message);
+    
+    // ✅ 或者：传统异常记录
+    EZLog.LogException("Module", ex);
+}
+```
+
+### 3. 运行时控制
+```csharp
+// ✅ 游戏启动时根据构建类型设置
+#if DEVELOPMENT_BUILD
+    EZLog.EnableAll();
+#else
+    EZLog.SetErrorAndAbove();
+#endif
+
+// ✅ 运行时根据场景调整
+void OnPerformanceMode(bool enabled)
+{
+    if (enabled)
+        EZLog.SetErrorAndAbove();  // 性能模式只记录错误
+    else
+        EZLog.EnableAll();         // 调试模式记录所有
+}
+```
+
+## 迁移指南
+
+### 从Unity Debug迁移
+```csharp
+// 旧代码 → 新代码
+Debug.Log("msg")           → EZLog.Log?.Log("tag", "msg")
+Debug.LogWarning("msg")    → EZLog.Warning?.Log("tag", "msg")
+Debug.LogError("msg")      → EZLog.Error?.Log("tag", "msg")
+Debug.LogException(ex)     → EZLog.LogException("tag", ex)
+```
+
+### 从其他日志库迁移
+```csharp
+// 通用模式 → EZ Logger
+logger.Info("msg")    → EZLog.Log?.Log("tag", "msg")
+logger.Warn("msg")    → EZLog.Warning?.Log("tag", "msg")
+logger.Error("msg")   → EZLog.Error?.Log("tag", "msg")
+```

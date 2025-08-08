@@ -1,0 +1,34 @@
+# Unity generated files
+*.tmp
+*.temp
+Temp/
+Library/
+Logs/
+
+# Unity meta files (keep only essential ones)
+# package.json.meta should be kept
+# .asmdef.meta files should be kept
+
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
+Build/
+Builds/
+
+# Temporary files
+*.log
+*.cache

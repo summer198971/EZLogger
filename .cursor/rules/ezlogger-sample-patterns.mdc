@@ -1,0 +1,316 @@
+---
+description: "EZ Logger 示例代码模式和最佳实践模板"
+globs: "Samples~/**/*.cs"
+---
+
+# EZ Logger 示例代码模式
+
+## 示例代码结构规范
+
+### 1. 示例文件命名约定
+- 文件名使用PascalCase，以`Example`结尾
+- 类名与文件名一致
+- 命名空间统一使用 `EZLogger.Samples`
+
+```csharp
+namespace EZLogger.Samples
+{
+    public class BasicUsageExample : MonoBehaviour
+    {
+        // 示例代码
+    }
+}
+```
+
+### 2. 示例代码结构模板
+```csharp
+using UnityEngine;
+using EZLogger;
+
+namespace EZLogger.Samples
+{
+    /// <summary>
+    /// [示例标题] - 简短描述示例功能
+    /// [详细说明示例演示的特性和用法]
+    /// </summary>
+    public class [ExampleName] : MonoBehaviour
+    {
+        [Header("示例配置")]
+        [SerializeField] private bool enableFeature = true;
+        
+        void Start()
+        {
+            // 1. 展示基础功能
+            DemonstrateBasicFeature();
+            
+            // 2. 展示高级功能
+            DemonstrateAdvancedFeature();
+            
+            // 3. 展示与Unity的对比
+            DemonstrateUnityComparison();
+        }
+        
+        void OnGUI()
+        {
+            // 显示当前状态和快捷键说明
+            DisplayCurrentStatus();
+            DisplayKeyboardHelp();
+        }
+        
+        void OnDestroy()
+        {
+            EZLog.Log?.Log("Lifecycle", "[ExampleName] 被销毁");
+        }
+    }
+}
+```
+
+## Unity LogType 对齐示例模式
+
+### 1. 基础日志演示模式
+```csharp
+/// <summary>
+/// 演示与Unity LogType完全对齐的基础用法
+/// </summary>
+void DemonstrateUnityAlignment()
+{
+    EZLog.Log?.Log("Demo", "=== Unity LogType对齐演示 ===");
+    
+    // 展示每个级别与Unity的对应关系
+    EZLog.Log?.Log("Unity", "普通日志 (对应Unity LogType.Log)");
+    EZLog.Warning?.Log("Unity", "警告日志 (对应Unity LogType.Warning)");
+    EZLog.Assert?.Log("Unity", "断言日志 (对应Unity LogType.Assert)");
+    EZLog.Error?.Log("Unity", "错误日志 (对应Unity LogType.Error)");
+    EZLog.Exception?.Log("Unity", "异常日志 (对应Unity LogType.Exception)");
+}
+```
+
+### 2. 与Unity Debug对比模式
+```csharp
+/// <summary>
+/// 演示EZ Logger与Unity Debug的完全对应关系
+/// </summary>
+void CompareWithUnityDebug()
+{
+    EZLog.Log?.Log("Compare", "=== Unity Debug vs EZ Logger ===");
+    
+    // Unity原生方式
+    Debug.Log("Unity: Debug.Log");
+    Debug.LogWarning("Unity: Debug.LogWarning");
+    Debug.LogAssertion("Unity: Debug.LogAssertion");
+    Debug.LogError("Unity: Debug.LogError");
+    
+    // EZ Logger方式 - 完全对应
+    EZLog.Log?.Log("EZLogger", "EZ Logger: EZLog.Log (完全对应)");
+    EZLog.Warning?.Log("EZLogger", "EZ Logger: EZLog.Warning (完全对应)");
+    EZLog.Assert?.Log("EZLogger", "EZ Logger: EZLog.Assert (完全对应)");
+    EZLog.Error?.Log("EZLogger", "EZ Logger: EZLog.Error (完全对应)");
+}
+```
+
+## 零开销演示模式
+
+### 1. 性能对比演示
+```csharp
+/// <summary>
+/// 演示零开销特性的性能差异
+/// </summary>
+void DemonstrateZeroGCPerformance()
+{
+    EZLog.Log?.Log("Performance", "=== 零开销性能演示 ===");
+    
+    // 保存原始级别
+    var originalLevels = EZLog.GetEnabledLevels();
+    
+    // 测试禁用时的性能
+    EZLog.DisableAll();
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    
+    for (int i = 0; i < 10000; i++)
+    {
+        // 这些调用在禁用时完全零开销
+        EZLog.Log?.LogFormat("Test", "测试消息 {0}", i);
+        EZLog.Warning?.Log("Test", GetExpensiveDebugInfo());
+    }
+    
+    stopwatch.Stop();
+    var disabledTime = stopwatch.ElapsedMilliseconds;
+    
+    // 恢复级别并报告结果
+    EZLog.SetEnabledLevels(originalLevels);
+    EZLog.Log?.LogFormat("Performance", "禁用状态下10000次调用耗时: {0}ms", disabledTime);
+}
+```
+
+### 2. 复杂参数演示
+```csharp
+/// <summary>
+/// 演示复杂参数计算的零开销保护
+/// </summary>
+void DemonstrateExpensiveParameterProtection()
+{
+    EZLog.Log?.Log("ZeroGC", "=== 复杂参数零开销保护演示 ===");
+    
+    // 当Log级别被禁用时，GetExpensiveDebugInfo()根本不会被调用
+    EZLog.Log?.Log("Performance", GetExpensiveDebugInfo());
+    
+    // 这种写法的字符串插值也不会执行
+    var complexObject = new { Name = "Test", Value = CalculateComplexValue() };
+    EZLog.Log?.Log("Performance", $"复杂对象: {complexObject}");
+}
+
+string GetExpensiveDebugInfo()
+{
+    // 模拟复杂计算
+    EZLog.Warning?.Log("Internal", "正在执行复杂调试信息计算...");
+    System.Threading.Thread.Sleep(10); // 模拟耗时操作
+    return $"复杂计算结果: {System.DateTime.Now:HH:mm:ss.fff}";
+}
+```
+
+## 运行时控制演示模式
+
+### 1. 级别切换演示
+```csharp
+/// <summary>
+/// 演示运行时级别控制与Unity filterLogType的对应
+/// </summary>
+void HandleLevelControlInput()
+{
+    if (Input.GetKeyDown(KeyCode.Alpha1))
+    {
+        // 对应Unity filterLogType = LogType.Log
+        EZLog.EnableAll();
+        EZLog.Log?.Log("Control", "已启用所有级别 - 对应Unity filterLogType = LogType.Log");
+    }
+    else if (Input.GetKeyDown(KeyCode.Alpha2))
+    {
+        // 对应Unity filterLogType = LogType.Warning
+        EZLog.SetWarningAndAbove();
+        EZLog.Warning?.Log("Control", "已设置Warning及以上 - 对应Unity filterLogType = LogType.Warning");
+    }
+    else if (Input.GetKeyDown(KeyCode.Alpha3))
+    {
+        // 对应Unity filterLogType = LogType.Error
+        EZLog.SetErrorAndAbove();
+        EZLog.Error?.Log("Control", "已设置Error及以上 - 对应Unity filterLogType = LogType.Error");
+    }
+}
+```
+
+### 2. 实时效果展示
+```csharp
+/// <summary>
+/// 实时展示级别切换的即时效果
+/// </summary>
+void Update()
+{
+    // 每秒测试所有级别，验证级别切换的即时效果
+    if (Time.frameCount % 60 == 0)
+    {
+        string timestamp = System.DateTime.Now.ToString("HH:mm:ss");
+        
+        EZLog.Log?.LogFormat("LiveTest", "[{0}] Log级别测试", timestamp);
+        EZLog.Warning?.LogFormat("LiveTest", "[{0}] Warning级别测试", timestamp);
+        EZLog.Error?.LogFormat("LiveTest", "[{0}] Error级别测试", timestamp);
+    }
+}
+```
+
+## GUI 显示模式
+
+### 1. 状态显示模板
+```csharp
+void OnGUI()
+{
+    var currentLevels = EZLog.GetEnabledLevels();
+    
+    // 显示当前状态
+    GUI.Label(new Rect(10, 10, 400, 20), $"当前EZLogger级别: {currentLevels}");
+    
+    // 显示Unity对应关系
+    string unityEquivalent = GetUnityEquivalent(currentLevels);
+    GUI.Label(new Rect(10, 40, 500, 20), $"Unity等效: {unityEquivalent}");
+    
+    // 显示级别详细状态
+    DisplayLevelStatus(currentLevels);
+    
+    // 显示快捷键帮助
+    DisplayKeyboardHelp();
+}
+
+string GetUnityEquivalent(LogLevel levels)
+{
+    if (levels == LogLevel.All)
+        return "Unity filterLogType = LogType.Log (显示所有)";
+    else if (levels == LogLevel.WarningAndAbove)
+        return "Unity filterLogType = LogType.Warning";
+    else if (levels == LogLevel.ErrorAndAbove)
+        return "Unity filterLogType = LogType.Error";
+    else if (levels == LogLevel.Exception)
+        return "Unity filterLogType = LogType.Exception";
+    else
+        return "自定义级别组合";
+}
+```
+
+### 2. 级别状态显示
+```csharp
+void DisplayLevelStatus(LogLevel currentLevels)
+{
+    GUI.Label(new Rect(10, 70, 400, 120),
+        $"级别状态 (与Unity LogType对应):\n" +
+        $"Log: {(currentLevels.Contains(LogLevel.Log) ? "✅" : "❌")} ← Unity LogType.Log\n" +
+        $"Warning: {(currentLevels.Contains(LogLevel.Warning) ? "✅" : "❌")} ← Unity LogType.Warning\n" +
+        $"Assert: {(currentLevels.Contains(LogLevel.Assert) ? "✅" : "❌")} ← Unity LogType.Assert\n" +
+        $"Error: {(currentLevels.Contains(LogLevel.Error) ? "✅" : "❌")} ← Unity LogType.Error\n" +
+        $"Exception: {(currentLevels.Contains(LogLevel.Exception) ? "✅" : "❌")} ← Unity LogType.Exception");
+}
+```
+
+## 配置演示模式
+
+### 1. 环境配置模板
+```csharp
+/// <summary>
+/// 演示不同环境下的配置策略
+/// </summary>
+void DemonstrateEnvironmentConfiguration()
+{
+#if UNITY_EDITOR
+    EZLog.Log?.Log("Config", "编辑器环境 - 启用详细日志");
+    EZLog.EnableAll();
+#elif DEVELOPMENT_BUILD
+    EZLog.Log?.Log("Config", "开发构建 - 启用大部分日志");
+    EZLog.SetWarningAndAbove();
+#else
+    EZLog.Log?.Log("Config", "发布构建 - 仅启用重要日志");
+    EZLog.SetErrorAndAbove();
+#endif
+}
+```
+
+### 2. 动态配置演示
+```csharp
+/// <summary>
+/// 演示运行时动态配置修改
+/// </summary>
+void DemonstrateRuntimeConfiguration()
+{
+    var config = EZLoggerManager.Instance.Configuration;
+    
+    EZLog.Log?.Log("Config", "=== 运行时配置演示 ===");
+    EZLog.Log?.LogFormat("Config", "性能模式: {0}", config.PerformanceMode);
+    EZLog.Log?.LogFormat("Config", "异步写入: {0}", config.EnableAsyncWrite);
+    EZLog.Log?.LogFormat("Config", "堆栈跟踪: {0}", config.EnableStackTrace);
+    
+    // 临时修改配置
+    var originalMode = config.PerformanceMode;
+    config.PerformanceMode = !originalMode;
+    EZLog.Log?.LogFormat("Config", "性能模式已切换为: {0}", config.PerformanceMode);
+    
+    // 恢复配置
+    config.PerformanceMode = originalMode;
+    EZLog.Log?.Log("Config", "配置已恢复");
+}
+```

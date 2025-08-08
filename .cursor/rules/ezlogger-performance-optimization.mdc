@@ -1,0 +1,197 @@
+---
+description: "EZ Logger 性能优化和零开销实现细节"
+globs: Runtime/**/*.cs
+---
+
+# EZ Logger 性能优化指南
+
+## 零开销实现原理
+
+### 1. 条件日志记录器机制
+EZ Logger的核心性能特性是通过条件日志记录器实现的：
+
+```csharp
+// 当级别被禁用时，这个属性返回null
+public static ConditionalLogger Log
+{
+    get
+    {
+        // 只有在级别变化时才刷新缓存
+        var currentLevels = EZLoggerManager.Instance.EnabledLevels;
+        if (currentLevels != _lastCheckedLevels)
+        {
+            RefreshCachedLoggers(currentLevels);
+        }
+        return _cachedL; // 禁用时为null，启用时为实例
+    }
+}
+```
+
+**关键点**:
+- 使用缓存避免重复创建对象
+- 级别变化时才刷新，避免频繁检查
+- 禁用时返回null，配合`?.`操作符实现零开销
+
+### 2. C# 空条件操作符的威力
+```csharp
+// 当EZLog.Log返回null时，整个表达式短路，参数不会被计算
+EZLog.Log?.Log("tag", ExpensiveOperation());
+
+// 等效于下面的代码，但更简洁
+var logger = EZLog.Log;
+if (logger != null)
+{
+    logger.Log("tag", ExpensiveOperation()); // 只有这时才计算参数
+}
+```
+
+### 3. 缓存优化策略
+```csharp
+// 避免频繁的级别检查
+private static LogLevel _lastCheckedLevels = LogLevel.None;
+private static ConditionalLogger _cachedL;
+
+// 只在级别真正变化时才更新缓存
+if (currentLevels != _lastCheckedLevels)
+{
+    RefreshCachedLoggers(currentLevels);
+}
+```
+
+## 性能关键点
+
+### 1. 方法内联优化
+```csharp
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
+public void Log(string tag, string message)
+{
+    // 关键路径方法标记为内联
+    _logger.Log(LogLevel.Log, tag, message);
+}
+```
+
+### 2. 避免装箱和字符串分配
+```csharp
+// ✅ 好的做法：延迟字符串构建
+EZLog.Log?.Log("Performance", () => $"Value: {expensiveValue}");
+
+// ❌ 避免：即使禁用也会分配字符串
+EZLog.Log?.Log("Performance", $"Value: {expensiveValue}");
+```
+
+### 3. 对象池化
+```csharp
+// 使用对象池减少GC压力
+private readonly ObjectPool<StringBuilder> _stringBuilderPool;
+private readonly ObjectPool<LogMessage> _logMessagePool;
+
+// 获取对象时从池中取，用完后归还
+var sb = _stringBuilderPool.Get();
+try
+{
+    // 使用StringBuilder
+}
+finally
+{
+    _stringBuilderPool.Return(sb);
+}
+```
+
+### 4. 异步处理优化
+```csharp
+// 使用线程安全队列实现异步写入
+private readonly ThreadSafeQueue<LogMessage> _messageQueue;
+
+// 写入线程专门处理IO操作，避免阻塞主线程
+private void WriteThreadProc()
+{
+    while (!_cancellationToken.IsCancellationRequested)
+    {
+        if (_messageQueue.TryDequeue(out var message))
+        {
+            WriteToAppenders(message);
+        }
+    }
+}
+```
+
+## 性能测试模式
+
+### 1. 基准测试代码
+```csharp
+public void PerformanceBenchmark()
+{
+    const int iterations = 100000;
+    
+    // 测试禁用级别的性能（应该接近零开销）
+    EZLog.DisableAll();
+    var stopwatch = Stopwatch.StartNew();
+    
+    for (int i = 0; i < iterations; i++)
+    {
+        EZLog.Log?.LogFormat("Benchmark", "Message {0}", i);
+    }
+    
+    stopwatch.Stop();
+    var disabledTime = stopwatch.ElapsedMilliseconds;
+    
+    // 测试启用级别的性能
+    EZLog.EnableAll();
+    stopwatch.Restart();
+    
+    for (int i = 0; i < iterations; i++)
+    {
+        EZLog.Log?.LogFormat("Benchmark", "Message {0}", i);
+    }
+    
+    stopwatch.Stop();
+    var enabledTime = stopwatch.ElapsedMilliseconds;
+    
+    // 禁用时应该比启用时快很多倍
+    Debug.Log($"禁用: {disabledTime}ms, 启用: {enabledTime}ms, 比率: {enabledTime/(float)disabledTime:F1}x");
+}
+```
+
+### 2. 内存分配测试
+```csharp
+public void MemoryAllocationTest()
+{
+    // 记录测试前的内存使用
+    var beforeMemory = GC.GetTotalMemory(true);
+    
+    // 执行大量禁用级别的日志调用
+    EZLog.DisableAll();
+    for (int i = 0; i < 10000; i++)
+    {
+        EZLog.Log?.LogFormat("Memory", "Test message {0} with value {1}", i, Random.value);
+    }
+    
+    // 检查内存增长（应该接近零）
+    var afterMemory = GC.GetTotalMemory(true);
+    var allocated = afterMemory - beforeMemory;
+    
+    Debug.Log($"禁用级别下分配内存: {allocated} bytes");
+}
+```
+
+## 性能优化检查清单
+
+### ✅ 必须遵守的性能原则
+1. **零开销要求**: 禁用级别时不能有任何性能开销
+2. **缓存机制**: 避免重复创建对象和计算
+3. **方法内联**: 关键路径使用`AggressiveInlining`
+4. **异步处理**: IO操作不能阻塞主线程
+5. **对象池化**: 重用StringBuilder等临时对象
+
+### ❌ 性能陷阱避免
+1. **避免装箱**: 不要传递值类型到object参数
+2. **避免闭包**: 小心lambda表达式的捕获
+3. **避免反射**: 运行时不使用反射操作
+4. **避免字符串连接**: 使用StringBuilder或插值
+5. **避免频繁分配**: 使用对象池和缓存
+
+### 🔍 性能监控点
+1. **调用频率**: 监控高频调用路径的性能
+2. **内存分配**: 使用Profiler检查GC分配
+3. **线程竞争**: 监控多线程环境下的性能
+4. **IO性能**: 测试文件和网络输出器的吞吐量

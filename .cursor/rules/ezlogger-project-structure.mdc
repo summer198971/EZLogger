@@ -1,0 +1,64 @@
+---
+alwaysApply: true
+description: "EZ Logger项目结构和核心架构指南"
+---
+
+# EZ Logger 项目结构指南
+
+EZ Logger是一个高性能、零开销的Unity日志库，与Unity LogType完全对齐。
+
+## 核心文件结构
+
+### Unity Package文件
+- [package.json](mdc:package.json) - Unity Package定义，包含包的元数据
+- [README.md](mdc:README.md) - 主要文档，包含API使用说明和示例
+- [CHANGELOG.md](mdc:CHANGELOG.md) - 版本更新记录
+- [LICENSE.md](mdc:LICENSE.md) - MIT许可证
+
+### 核心运行时代码
+- [Runtime/Core/LogLevel.cs](mdc:Runtime/Core/LogLevel.cs) - 定义与Unity LogType对齐的日志级别枚举
+- [Runtime/Core/LogMessage.cs](mdc:Runtime/Core/LogMessage.cs) - 日志消息数据结构
+- [Runtime/Core/ILogger.cs](mdc:Runtime/Core/ILogger.cs) - 日志记录器接口定义
+- [Runtime/Core/EZLoggerManager.cs](mdc:Runtime/Core/EZLoggerManager.cs) - 核心管理器和EZLog静态类
+- [Runtime/Core/ConditionalLogger.cs](mdc:Runtime/Core/ConditionalLogger.cs) - 实现零开销条件日志记录
+- [Runtime/Core/LoggerConfiguration.cs](mdc:Runtime/Core/LoggerConfiguration.cs) - 日志器配置类
+
+### 输出器系统
+- [Runtime/Appenders/ILogAppender.cs](mdc:Runtime/Appenders/ILogAppender.cs) - 日志输出器接口
+- [Runtime/Appenders/UnityAppender.cs](mdc:Runtime/Appenders/UnityAppender.cs) - Unity Console输出器
+- [Runtime/Appenders/FileAppender.cs](mdc:Runtime/Appenders/FileAppender.cs) - 文件输出器
+
+### 工具类
+- [Runtime/Utils/ThreadSafeQueue.cs](mdc:Runtime/Utils/ThreadSafeQueue.cs) - 线程安全队列，用于异步日志
+- [Runtime/Utils/ObjectPool.cs](mdc:Runtime/Utils/ObjectPool.cs) - 对象池，减少GC分配
+
+### Assembly Definition文件
+- [Runtime/EZLogger.Runtime.asmdef](mdc:Runtime/EZLogger.Runtime.asmdef) - 运行时程序集定义
+- [Editor/EZLogger.Editor.asmdef](mdc:Editor/EZLogger.Editor.asmdef) - 编辑器程序集定义
+- [Tests/Runtime/EZLogger.Tests.asmdef](mdc:Tests/Runtime/EZLogger.Tests.asmdef) - 运行时测试程序集
+- [Tests/Editor/EZLogger.Editor.Tests.asmdef](mdc:Tests/Editor/EZLogger.Editor.Tests.asmdef) - 编辑器测试程序集
+
+## 核心设计原则
+
+1. **Unity LogType对齐** - 所有日志级别完全对应Unity的LogType
+2. **零开销设计** - 禁用的日志级别不产生任何性能开销
+3. **运行时动态控制** - 支持运行时切换日志级别
+4. **模块化架构** - 输出器可插拔，支持扩展
+
+## API设计模式
+
+### 零开销API（推荐）
+```csharp
+EZLog.Log?.Log("tag", "message")        // 对应Unity LogType.Log
+EZLog.Warning?.Log("tag", "message")    // 对应Unity LogType.Warning
+EZLog.Assert?.Log("tag", "message")     // 对应Unity LogType.Assert
+EZLog.Error?.Log("tag", "message")      // 对应Unity LogType.Error
+EZLog.Exception?.Log("tag", "message")  // 对应Unity LogType.Exception
+```
+
+### Unity filterLogType兼容
+```csharp
+EZLog.EnableAll()           // 对应filterLogType = LogType.Log
+EZLog.SetWarningAndAbove()  // 对应filterLogType = LogType.Warning
+EZLog.SetErrorAndAbove()    // 对应filterLogType = LogType.Error
+```
