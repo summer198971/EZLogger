@@ -11,6 +11,8 @@ EZ Logger 是一个为Unity设计的高性能、零分配日志系统，支持�
 - 🌐 **服务器集成**: 支持日志发送到远程服务器
 - 🔧 **可扩展**: 插件化架构，支持自定义输出器
 - 🎯 **Unity优化**: 专为Unity环境优化，支持帧数、堆栈跟踪等
+- 🛡️ **系统监控**: 自动捕获Unity系统错误和异常，支持防重复机制
+- 📡 **错误上报**: 自动上报系统错误到服务器，便于线上问题追踪
 
 ## 📦 安装
 
@@ -231,6 +233,89 @@ EZLoggerManager.Instance.Configuration = config;
 ```
 
 ## 🔧 高级功能
+
+### 系统监控和错误上报
+
+EZ Logger 提供强大的系统级错误监控功能，可以自动捕获Unity系统错误和异常：
+
+```csharp
+public class ErrorMonitoringSetup : MonoBehaviour
+{
+    void Start()
+    {
+        // 启用系统日志监控 - 自动捕获Unity系统错误
+        EZLog.EnableSystemLogMonitor(true);
+        
+        // 启用错误上报 - 自动上报错误到服务器
+        EZLog.EnableServerReporting(true);
+        
+        // 注册自定义上报处理器
+        EZLog.OnServerReport(OnErrorReport);
+        
+        EZLog.Log?.Log("Monitor", "系统错误监控已启动");
+    }
+    
+    // 自定义错误上报处理
+    void OnErrorReport(string message, LogLevel logLevel)
+    {
+        // 在这里实现您的错误上报逻辑
+        // 例如: 发送到您的错误收集服务器
+        SendToErrorServer(message, logLevel);
+    }
+    
+    void SendToErrorServer(string message, LogLevel logLevel)
+    {
+        // 实现具体的HTTP上报逻辑
+        var errorData = new {
+            message = message,
+            level = logLevel.ToString(),
+            timestamp = System.DateTime.UtcNow,
+            platform = Application.platform.ToString(),
+            version = Application.version
+        };
+        
+        // POST到您的错误收集API
+        // StartCoroutine(PostErrorData(errorData));
+    }
+}
+```
+
+#### 防重复机制
+
+EZ Logger 自动处理防重复问题，避免自定义API调用Unity Debug时造成重复日志：
+
+```csharp
+// 使用EZLog的LogError - 自动防止重复记录
+EZLog.LogError("MySystem", "这是一个错误"); 
+// 这会自动防止在系统监控中重复记录
+
+// 直接使用Unity Debug - 会被系统监控捕获
+Debug.LogError("Unity原生错误"); 
+// 这会被系统监控捕获并上报
+```
+
+#### 运行时控制
+
+```csharp
+// 检查状态
+if (EZLog.IsSystemLogMonitorEnabled)
+{
+    EZLog.Log?.Log("Info", "系统监控正在运行");
+}
+
+// 动态开关
+EZLog.EnableSystemLogMonitor(false); // 禁用监控
+EZLog.EnableServerReporting(false);  // 禁用上报
+
+// 在发布版本中可能只启用错误监控
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    EZLog.EnableSystemLogMonitor(true);
+    EZLog.EnableServerReporting(false); // 开发环境不上报
+#else
+    EZLog.EnableSystemLogMonitor(true);
+    EZLog.EnableServerReporting(true);  // 生产环境启用上报
+#endif
+```
 
 ### 添加自定义输出器
 
