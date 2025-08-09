@@ -37,10 +37,32 @@ namespace EZLogger
             Level = level;
             Tag = tag ?? "DEFAULT";
             Message = message ?? string.Empty;
-            Timestamp = DateTime.Now;
+            Timestamp = GetConfiguredTime();
             FrameCount = frameCount;
             ThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             StackTrace = stackTrace;
+        }
+        
+        /// <summary>
+        /// 获取配置的时间（从管理器获取时区配置）
+        /// </summary>
+        private static DateTime GetConfiguredTime()
+        {
+            try
+            {
+                var manager = EZLoggerManager.Instance;
+                if (manager?.Configuration?.Timezone != null)
+                {
+                    return manager.Configuration.Timezone.GetCurrentTime();
+                }
+            }
+            catch
+            {
+                // 如果获取配置失败，回退到UTC时间
+            }
+            
+            // 默认使用UTC时间
+            return DateTime.UtcNow;
         }
         
         /// <summary>

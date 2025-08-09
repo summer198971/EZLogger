@@ -122,6 +122,16 @@ namespace EZLogger.Editor
 
         [Tooltip("收集性能信息")]
         public bool collectPerformanceInfo = false;
+        
+        [Header("时区配置")]
+        [Tooltip("是否使用UTC时间（默认true）")]
+        public bool useUtcTime = true;
+        
+        [Tooltip("自定义时区ID（当不使用UTC时）")]
+        public string customTimezoneId = "";
+        
+        [Tooltip("时间格式化字符串")]
+        public string timeFormat = "yyyy-MM-dd HH:mm:ss.fff";
 
         /// <summary>
         /// 转换为LoggerConfiguration
@@ -175,6 +185,11 @@ namespace EZLogger.Editor
                 MinLevel = serverMinLevel,
                 EnableCompression = enableServerCompression
             };
+            
+            // 时区配置
+            config.Timezone.UseUtc = useUtcTime;
+            config.Timezone.TimezoneId = customTimezoneId ?? "";
+            config.Timezone.TimeFormat = timeFormat ?? "yyyy-MM-dd HH:mm:ss.fff";
 
             return config;
         }
@@ -227,6 +242,14 @@ namespace EZLogger.Editor
                 sendInterval = config.ServerOutput.SendInterval;
                 serverMinLevel = config.ServerOutput.MinLevel;
                 enableServerCompression = config.ServerOutput.EnableCompression;
+            }
+            
+            // 时区配置
+            if (config.Timezone != null)
+            {
+                useUtcTime = config.Timezone.UseUtc;
+                customTimezoneId = config.Timezone.TimezoneId ?? "";
+                timeFormat = config.Timezone.TimeFormat ?? "yyyy-MM-dd HH:mm:ss.fff";
             }
         }
 

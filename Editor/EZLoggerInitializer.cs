@@ -54,7 +54,7 @@ namespace EZLogger.Editor
                 if (settings.collectDeviceInfo)
                 {
                     manager.SetReportExtraData("configVersion", "ProjectSettings");
-                    manager.SetReportExtraData("timestamp", System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                    manager.SetReportExtraData("timestamp", config.Timezone.FormatTime());
                 }
 
                 Debug.Log("[EZLogger] 项目设置已应用到运行时");

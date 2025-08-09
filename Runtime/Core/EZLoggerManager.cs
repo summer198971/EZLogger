@@ -206,7 +206,7 @@ namespace EZLogger
                 SetReportExtraData("operatingSystem", UnityEngine.SystemInfo.operatingSystem);
                 SetReportExtraData("graphicsDeviceName", UnityEngine.SystemInfo.graphicsDeviceName);
                 SetReportExtraData("systemMemorySize", UnityEngine.SystemInfo.systemMemorySize);
-                SetReportExtraData("timestamp", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                SetReportExtraData("timestamp", _configuration.Timezone.FormatTime());
             }
             catch (Exception ex)
             {

@@ -54,6 +54,36 @@ Tools → EZ Logger → Open Settings
 - **✅ 已实现 (60%)**：基础日志、零开销API、Unity控制台、基础文件输出、基础服务器上报、系统监控
 - **⚠️ 待实现 (40%)**：自动堆栈跟踪、文件轮转管理、完整服务器配置、性能信息收集、扩展配置
 
+### ⏰ 时区配置
+
+EZ Logger 支持灵活的时区配置，默认使用UTC时间：
+
+```csharp
+// 配置UTC时间（默认）
+var config = new LoggerConfiguration();
+config.Timezone.UseUtc = true;
+config.Timezone.TimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+
+// 配置本地时间
+config.Timezone.UseUtc = false;
+config.Timezone.TimezoneId = ""; // 空字符串表示本地时间
+
+// 配置特定时区
+config.Timezone.UseUtc = false;
+config.Timezone.TimezoneId = "China Standard Time"; // 中国标准时间
+config.Timezone.TimeFormat = "yyyy-MM-dd HH:mm:ss.fff CST";
+
+// 应用配置
+EZLoggerManager.Instance.Configuration = config;
+```
+
+**支持的时区格式**：
+- `UTC` - 协调世界时（默认）
+- `China Standard Time` - 中国标准时间
+- `Eastern Standard Time` - 美国东部时间
+- `Pacific Standard Time` - 美国太平洋时间
+- 空字符串 - 系统本地时间
+
 ### 快速配置预设
 
 - **开发模式**: 启用所有日志级别，适合开发调试

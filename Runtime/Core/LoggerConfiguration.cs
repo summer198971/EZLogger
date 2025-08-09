@@ -4,6 +4,59 @@ using System.Collections.Generic;
 namespace EZLogger
 {
     /// <summary>
+    /// 时区配置类
+    /// </summary>
+    [Serializable]
+    public class TimezoneConfig
+    {
+        /// <summary>是否使用UTC时间（默认true）</summary>
+        public bool UseUtc = true;
+        
+        /// <summary>自定义时区ID（当UseUtc=false时使用）</summary>
+        public string TimezoneId = "";
+        
+        /// <summary>时间格式化字符串</summary>
+        public string TimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+        
+        /// <summary>
+        /// 获取当前配置的时间
+        /// </summary>
+        public DateTime GetCurrentTime()
+        {
+            if (UseUtc)
+            {
+                return DateTime.UtcNow;
+            }
+            
+            if (!string.IsNullOrEmpty(TimezoneId))
+            {
+                try
+                {
+                    var timeZone = TimeZoneInfo.FindSystemTimeZoneById(TimezoneId);
+                    return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+                }
+                catch
+                {
+                    // 如果时区ID无效，回退到UTC
+                    return DateTime.UtcNow;
+                }
+            }
+            
+            // 默认使用本地时间
+            return DateTime.Now;
+        }
+        
+        /// <summary>
+        /// 格式化时间字符串
+        /// </summary>
+        public string FormatTime(DateTime? time = null)
+        {
+            var targetTime = time ?? GetCurrentTime();
+            return targetTime.ToString(TimeFormat);
+        }
+    }
+
+    /// <summary>
     /// 日志配置类
     /// </summary>
     [Serializable]
@@ -44,6 +97,9 @@ namespace EZLogger
         
         /// <summary>扩展配置字典</summary>
         public Dictionary<string, object> ExtensionConfigs = new Dictionary<string, object>();
+        
+        /// <summary>时区配置</summary>
+        public TimezoneConfig Timezone = new TimezoneConfig();
         
         /// <summary>
         /// 创建默认配置
