@@ -294,16 +294,16 @@ namespace EZLogger.Editor
             if (!settings.useUtcTime)
             {
                 EditorGUI.indentLevel++;
-                
+
                 // UTC偏移小时数滑块
                 var offsetProperty = serializedSettings.FindProperty("utcOffsetHours");
                 EditorGUILayout.IntSlider(offsetProperty, -12, 14, new GUIContent("UTC偏移小时数"));
-                
+
                 // 常见时区快速设置按钮
                 EditorGUILayout.Space(5);
                 EditorGUILayout.LabelField("常见时区快速设置:", EditorStyles.miniLabel);
                 EditorGUILayout.BeginHorizontal();
-                
+
                 if (GUILayout.Button("北京时间 (+8)", EditorStyles.miniButton))
                     offsetProperty.intValue = 8;
                 if (GUILayout.Button("东京时间 (+9)", EditorStyles.miniButton))
@@ -312,9 +312,9 @@ namespace EZLogger.Editor
                     offsetProperty.intValue = -5;
                 if (GUILayout.Button("伦敦时间 (+0)", EditorStyles.miniButton))
                     offsetProperty.intValue = 0;
-                
+
                 EditorGUILayout.EndHorizontal();
-                
+
                 EditorGUI.indentLevel--;
             }
 
@@ -330,13 +330,13 @@ namespace EZLogger.Editor
                     UseUtc = settings.useUtcTime,
                     UtcOffsetHours = settings.utcOffsetHours
                 };
-                
+
                 // 确保偏移在有效范围内
                 timezone.ClampUtcOffset();
 
                 string currentTime = timezone.FormatTime();
                 string timezoneName = timezone.GetTimezoneDisplayName();
-                
+
                 EditorGUILayout.LabelField($"  当前时间: {currentTime}");
                 EditorGUILayout.LabelField($"  时区: {timezoneName}");
                 EditorGUILayout.LabelField($"  格式: yyyy-MM-dd HH:mm:ss.fff (固定)", EditorStyles.miniLabel);

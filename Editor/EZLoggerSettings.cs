@@ -123,10 +123,10 @@ namespace EZLogger.Editor
         [Tooltip("收集性能信息")]
         public bool collectPerformanceInfo = false;
 
-                [Header("时区配置")]
+        [Header("时区配置")]
         [Tooltip("是否使用UTC时间（默认true）")]
         public bool useUtcTime = true;
-        
+
         [Tooltip("UTC偏移小时数（范围-12到+14，当不使用UTC时）")]
         [Range(-12, 14)]
         public int utcOffsetHours = 0;
