@@ -10,35 +10,34 @@ namespace EZLogger.Appenders
     /// </summary>
     public class FileAppender : LogAppenderBase
     {
-        private FileOutputConfig _config;
-        private FileStream _fileStream;
-        private StreamWriter _streamWriter;
-        private string _currentFilePath;
-        
+        private FileOutputConfig? _config;
+        private FileStream? _fileStream;
+        private StreamWriter? _streamWriter;
+        private string? _currentFilePath;
+
         // 线程安全相关
         private readonly object _fileLock = new object();
         private readonly object _queueLock = new object();
-        
+
         // 写入线程相关
-        private Thread _writeThread;
+        private Thread? _writeThread;
         private volatile bool _isWriteThreadRunning;
         private readonly System.Collections.Generic.Queue<LogMessage> _messageQueue = new System.Collections.Generic.Queue<LogMessage>();
-        
+
         // 文件大小检查相关
-        private Timer _sizeCheckTimer;
+        private Timer? _sizeCheckTimer;
         private readonly object _sizeCheckLock = new object();
 
         public override string Name => "FileAppender";
-        public override LogLevel SupportedLevels { get; set; } = LogLevel.All;
         public override bool SupportsAsyncWrite => true;
 
         /// <summary>
-        /// 初始化文件输出器
+        /// 核心初始化逻辑
         /// </summary>
-        public override void Initialize(object config)
+        protected override void InitializeCore(object config)
         {
             _config = config as FileOutputConfig ?? new FileOutputConfig();
-            
+
             if (_config.Enabled)
             {
                 OpenLogFile();
@@ -48,11 +47,11 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>
-        /// 写入日志消息
+        /// 核心写入逻辑
         /// </summary>
-        public override void WriteLog(LogMessage message)
+        protected override void WriteLogCore(LogMessage message)
         {
-            if (!IsEnabled || !_config.Enabled)
+            if (_config?.Enabled != true)
                 return;
 
             lock (_queueLock)
@@ -85,26 +84,26 @@ namespace EZLogger.Appenders
         {
             while (_isWriteThreadRunning)
             {
-                try
-                {
-                    LogMessage message = null;
-                    
-                    lock (_queueLock)
-                    {
-                        if (_messageQueue.Count > 0)
-                        {
-                            message = _messageQueue.Dequeue();
-                        }
-                    }
+                                 try
+                 {
+                     LogMessage? message = null;
+                     
+                     lock (_queueLock)
+                     {
+                         if (_messageQueue.Count > 0)
+                         {
+                             message = _messageQueue.Dequeue();
+                         }
+                     }
 
-                    if (message != null)
-                    {
-                        WriteToFile(message);
-                    }
-                    else
-                    {
-                        Thread.Sleep(10);
-                    }
+                     if (message.HasValue)
+                     {
+                         WriteToFile(message.Value);
+                     }
+                     else
+                     {
+                         Thread.Sleep(10);
+                     }
                 }
                 catch (Exception ex)
                 {
@@ -139,12 +138,9 @@ namespace EZLogger.Appenders
         /// <summary>
         /// 格式化日志消息
         /// </summary>
-        private string FormatLogMessage(LogMessage message)
+                private string FormatLogMessage(LogMessage message)
         {
-            var timestamp = _config.UseUtcTime 
-                ? message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff")
-                : message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            
+            var timestamp = message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
             return $"[{timestamp}] [{message.Level}] [{message.Tag}] {message.Message}";
         }
 
@@ -156,7 +152,7 @@ namespace EZLogger.Appenders
             try
             {
                 string logDir = GetLogDirectoryPath();
-                string fileName = string.Format(_config.FileNameTemplate, GetConfiguredTime());
+                string fileName = string.Format(_config?.FileNameTemplate ?? "log_{0:yyyyMMdd}.txt", GetConfiguredTime());
                 _currentFilePath = Path.Combine(logDir, fileName);
 
                 _fileStream = new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
@@ -175,9 +171,9 @@ namespace EZLogger.Appenders
         /// <summary>
         /// 获取日志目录路径
         /// </summary>
-        private string GetLogDirectoryPath()
+                private string GetLogDirectoryPath()
         {
-            string logDir = _config.Directory;
+            string logDir = _config?.LogDirectory ?? "";
             
             if (string.IsNullOrEmpty(logDir))
             {
@@ -195,22 +191,22 @@ namespace EZLogger.Appenders
         /// <summary>
         /// 启动文件大小检查定时器
         /// </summary>
-        private void StartSizeCheckTimer()
+                private void StartSizeCheckTimer()
         {
-            if (!_config.EnableSizeCheck || _config.SizeCheckIntervalSeconds <= 0)
+            if (_config?.EnableSizeCheck != true || _config.SizeCheckInterval <= 0)
                 return;
 
             _sizeCheckTimer = new Timer(CheckFileSize, null, 
-                TimeSpan.FromSeconds(_config.SizeCheckIntervalSeconds),
-                TimeSpan.FromSeconds(_config.SizeCheckIntervalSeconds));
+                TimeSpan.FromSeconds(_config.SizeCheckInterval),
+                TimeSpan.FromSeconds(_config.SizeCheckInterval));
         }
 
         /// <summary>
         /// 检查文件大小
         /// </summary>
-        private void CheckFileSize(object state)
+        private void CheckFileSize(object? state)
         {
-            if (!_config.EnableSizeCheck)
+            if (_config?.EnableSizeCheck != true)
                 return;
 
             lock (_sizeCheckLock)
@@ -221,9 +217,10 @@ namespace EZLogger.Appenders
                         return;
 
                     var fileInfo = new FileInfo(_currentFilePath);
-                    long fileSizeMB = fileInfo.Length / (1024 * 1024);
+                    long fileSizeBytes = fileInfo.Length;
+                    long maxSizeBytes = (long)(_config?.MaxFileSize ?? 0);
 
-                    if (fileSizeMB > _config.MaxFileSizeMB)
+                    if (fileSizeBytes > maxSizeBytes)
                     {
                         TrimLogFile(fileInfo);
                     }
@@ -252,14 +249,14 @@ namespace EZLogger.Appenders
 
                     // 读取文件后半部分内容
                     byte[] fileBytes = File.ReadAllBytes(fileInfo.FullName);
-                    long keepBytes = _config.KeepSizeMB * 1024 * 1024;
+                    long keepBytes = (long)(_config?.KeepSize ?? 0);
                     long trimSize = fileBytes.Length - keepBytes;
 
                     if (keepBytes > 0 && keepBytes < fileBytes.Length)
                     {
                         byte[] keepData = new byte[keepBytes];
                         Array.Copy(fileBytes, trimSize, keepData, 0, keepBytes);
-                        
+
                         // 重写文件
                         File.WriteAllBytes(fileInfo.FullName, keepData);
 
@@ -306,7 +303,7 @@ namespace EZLogger.Appenders
             {
                 // 如果获取配置失败，回退到UTC时间
             }
-            
+
             // 默认使用UTC时间
             return DateTime.UtcNow;
         }
@@ -322,10 +319,10 @@ namespace EZLogger.Appenders
                 {
                     isEmpty = _messageQueue.Count == 0;
                 }
-                
+
                 if (isEmpty)
                     break;
-                    
+
                 Thread.Sleep(10);
                 waitCount++;
             }
@@ -373,7 +370,7 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>处理内部错误</summary>
-        private void HandleInternalError(Exception ex)
+        protected override void HandleInternalError(Exception ex)
         {
             // 避免无限递归，直接输出到Unity控制台
             UnityEngine.Debug.LogError($"[FileAppender] Error: {ex.Message}");
