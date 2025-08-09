@@ -12,11 +12,11 @@ namespace EZLogger
         /// <summary>是否使用UTC时间（默认true）</summary>
         public bool UseUtc = true;
 
-        /// <summary>自定义时区ID（当UseUtc=false时使用）</summary>
-        public string TimezoneId = "";
+        /// <summary>UTC偏移小时数（当UseUtc=false时使用，范围-12到+14）</summary>
+        public int UtcOffsetHours = 0;
 
-        /// <summary>时间格式化字符串</summary>
-        public string TimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+        /// <summary>默认时间格式</summary>
+        private const string DEFAULT_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.fff";
 
         /// <summary>
         /// 获取当前配置的时间
@@ -28,31 +28,49 @@ namespace EZLogger
                 return DateTime.UtcNow;
             }
 
-            if (!string.IsNullOrEmpty(TimezoneId))
-            {
-                try
-                {
-                    var timeZone = TimeZoneInfo.FindSystemTimeZoneById(TimezoneId);
-                    return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
-                }
-                catch
-                {
-                    // 如果时区ID无效，回退到UTC
-                    return DateTime.UtcNow;
-                }
-            }
-
-            // 默认使用本地时间
-            return DateTime.Now;
+            // 使用UTC偏移小时数计算时间
+            var utcTime = DateTime.UtcNow;
+            return utcTime.AddHours(UtcOffsetHours);
         }
 
         /// <summary>
-        /// 格式化时间字符串
+        /// 格式化时间字符串（使用默认格式）
         /// </summary>
         public string FormatTime(DateTime? time = null)
         {
             var targetTime = time ?? GetCurrentTime();
-            return targetTime.ToString(TimeFormat);
+            return targetTime.ToString(DEFAULT_TIME_FORMAT);
+        }
+
+        /// <summary>
+        /// 获取时区显示名称
+        /// </summary>
+        public string GetTimezoneDisplayName()
+        {
+            if (UseUtc)
+            {
+                return "UTC";
+            }
+
+            var offsetSign = UtcOffsetHours >= 0 ? "+" : "";
+            return $"UTC{offsetSign}{UtcOffsetHours}";
+        }
+
+        /// <summary>
+        /// 验证UTC偏移小时数是否有效
+        /// </summary>
+        public bool IsValidUtcOffset()
+        {
+            return UtcOffsetHours >= -12 && UtcOffsetHours <= 14;
+        }
+
+        /// <summary>
+        /// 确保UTC偏移小时数在有效范围内
+        /// </summary>
+        public void ClampUtcOffset()
+        {
+            if (UtcOffsetHours < -12) UtcOffsetHours = -12;
+            if (UtcOffsetHours > 14) UtcOffsetHours = 14;
         }
     }
 

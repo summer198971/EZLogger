@@ -294,30 +294,52 @@ namespace EZLogger.Editor
             if (!settings.useUtcTime)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("customTimezoneId"), new GUIContent("自定义时区ID"));
-                EditorGUILayout.HelpBox("时区ID示例:\n• China Standard Time\n• UTC\n• Eastern Standard Time\n• Pacific Standard Time", MessageType.Info);
+                
+                // UTC偏移小时数滑块
+                var offsetProperty = serializedSettings.FindProperty("utcOffsetHours");
+                EditorGUILayout.IntSlider(offsetProperty, -12, 14, new GUIContent("UTC偏移小时数"));
+                
+                // 常见时区快速设置按钮
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("常见时区快速设置:", EditorStyles.miniLabel);
+                EditorGUILayout.BeginHorizontal();
+                
+                if (GUILayout.Button("北京时间 (+8)", EditorStyles.miniButton))
+                    offsetProperty.intValue = 8;
+                if (GUILayout.Button("东京时间 (+9)", EditorStyles.miniButton))
+                    offsetProperty.intValue = 9;
+                if (GUILayout.Button("纽约时间 (-5)", EditorStyles.miniButton))
+                    offsetProperty.intValue = -5;
+                if (GUILayout.Button("伦敦时间 (+0)", EditorStyles.miniButton))
+                    offsetProperty.intValue = 0;
+                
+                EditorGUILayout.EndHorizontal();
+                
                 EditorGUI.indentLevel--;
             }
-
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("timeFormat"), new GUIContent("时间格式"));
 
             EditorGUILayout.Space(5);
 
             // 显示当前时间示例
-            EditorGUILayout.LabelField("时间示例:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("时间预览:", EditorStyles.boldLabel);
 
             try
             {
                 var timezone = new TimezoneConfig
                 {
                     UseUtc = settings.useUtcTime,
-                    TimezoneId = settings.customTimezoneId,
-                    TimeFormat = settings.timeFormat
+                    UtcOffsetHours = settings.utcOffsetHours
                 };
+                
+                // 确保偏移在有效范围内
+                timezone.ClampUtcOffset();
 
                 string currentTime = timezone.FormatTime();
+                string timezoneName = timezone.GetTimezoneDisplayName();
+                
                 EditorGUILayout.LabelField($"  当前时间: {currentTime}");
-                EditorGUILayout.LabelField($"  时区: {(settings.useUtcTime ? "UTC" : (string.IsNullOrEmpty(settings.customTimezoneId) ? "本地时间" : settings.customTimezoneId))}");
+                EditorGUILayout.LabelField($"  时区: {timezoneName}");
+                EditorGUILayout.LabelField($"  格式: yyyy-MM-dd HH:mm:ss.fff (固定)", EditorStyles.miniLabel);
             }
             catch (System.Exception ex)
             {

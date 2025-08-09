@@ -123,15 +123,13 @@ namespace EZLogger.Editor
         [Tooltip("收集性能信息")]
         public bool collectPerformanceInfo = false;
 
-        [Header("时区配置")]
+                [Header("时区配置")]
         [Tooltip("是否使用UTC时间（默认true）")]
         public bool useUtcTime = true;
-
-        [Tooltip("自定义时区ID（当不使用UTC时）")]
-        public string customTimezoneId = "";
-
-        [Tooltip("时间格式化字符串")]
-        public string timeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+        
+        [Tooltip("UTC偏移小时数（范围-12到+14，当不使用UTC时）")]
+        [Range(-12, 14)]
+        public int utcOffsetHours = 0;
 
         /// <summary>
         /// 转换为LoggerConfiguration
@@ -188,8 +186,8 @@ namespace EZLogger.Editor
 
             // 时区配置
             config.Timezone.UseUtc = useUtcTime;
-            config.Timezone.TimezoneId = customTimezoneId ?? "";
-            config.Timezone.TimeFormat = timeFormat ?? "yyyy-MM-dd HH:mm:ss.fff";
+            config.Timezone.UtcOffsetHours = utcOffsetHours;
+            config.Timezone.ClampUtcOffset(); // 确保偏移在有效范围内
 
             return config;
         }
@@ -248,8 +246,7 @@ namespace EZLogger.Editor
             if (config.Timezone != null)
             {
                 useUtcTime = config.Timezone.UseUtc;
-                customTimezoneId = config.Timezone.TimezoneId ?? "";
-                timeFormat = config.Timezone.TimeFormat ?? "yyyy-MM-dd HH:mm:ss.fff";
+                utcOffsetHours = config.Timezone.UtcOffsetHours;
             }
         }
 
