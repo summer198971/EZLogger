@@ -97,7 +97,7 @@ namespace EZLogger
             {
                 _configuration = value ?? LoggerConfiguration.CreateDefault();
                 EnabledLevels = _configuration.GlobalEnabledLevels;
-                
+
                 // 运行时重新配置输出器
                 RefreshAppenders();
             }
@@ -211,7 +211,7 @@ namespace EZLogger
 
             // 管理Unity控制台输出器
             ManageUnityAppender();
-            
+
             // 管理文件输出器
             ManageFileAppender();
         }
@@ -223,7 +223,7 @@ namespace EZLogger
         {
             const string UNITY_APPENDER_NAME = "Unity Console";
             var existingAppender = GetAppenderByName(UNITY_APPENDER_NAME);
-            
+
             if (_configuration.UnityConsole.Enabled)
             {
                 if (existingAppender == null)
@@ -278,7 +278,7 @@ namespace EZLogger
         {
             const string FILE_APPENDER_NAME = "FileAppender";
             var existingAppender = GetAppenderByName(FILE_APPENDER_NAME);
-            
+
             if (_configuration.FileOutput.Enabled)
             {
                 if (existingAppender == null)

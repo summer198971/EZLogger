@@ -154,13 +154,13 @@ namespace EZLogger.Editor
                 if (settings != null && !string.IsNullOrEmpty(settings.logDirectory))
                 {
                     string configuredPath = settings.logDirectory;
-                    
+
                     // 如果是相对路径，基于persistentDataPath
                     if (!Path.IsPathRooted(configuredPath))
                     {
                         configuredPath = Path.Combine(Application.persistentDataPath, configuredPath);
                     }
-                    
+
                     // 确保目录存在
                     if (Directory.Exists(configuredPath))
                     {
@@ -175,7 +175,7 @@ namespace EZLogger.Editor
 
             // 回退到默认路径
             var defaultLogFolder = Path.Combine(Application.persistentDataPath, "Logs");
-            
+
             // 确保默认目录存在
             if (!Directory.Exists(defaultLogFolder))
             {
@@ -189,7 +189,7 @@ namespace EZLogger.Editor
                     Debug.LogError($"[EZLogger] 创建日志目录失败: {ex.Message}");
                 }
             }
-            
+
             return defaultLogFolder;
         }
 
@@ -238,7 +238,7 @@ namespace EZLogger.Editor
             catch (System.Exception ex)
             {
                 Debug.LogError($"[EZLogger] 打开文件夹失败: {ex.Message}");
-                
+
                 // 备用方案：尝试直接启动路径
                 try
                 {
@@ -253,10 +253,10 @@ namespace EZLogger.Editor
                 catch (System.Exception backupEx)
                 {
                     Debug.LogError($"[EZLogger] 备用方案也失败: {backupEx.Message}");
-                    
+
                     // 最后的信息提示
                     Debug.Log($"[EZLogger] 请手动打开日志文件夹: {folderPath}");
-                    
+
                     // 将路径复制到剪贴板（如果可能）
                     CopyToClipboard(folderPath);
                 }
