@@ -580,7 +580,7 @@ namespace EZLogger
         /// </summary>
         public bool IsServerReportingEnabled => _serverReportingEnabled;
 
-                /// <summary>
+        /// <summary>
         /// 上报错误到服务器（统一入口）
         /// </summary>
         /// <param name="message">错误消息</param>
@@ -593,7 +593,7 @@ namespace EZLogger
             {
                 return;
             }
-            
+
             // 启动服务器上报线程（如果还没启动）
             if (_serverReportThread == null && !string.IsNullOrEmpty(_serverUrl))
             {
@@ -605,10 +605,10 @@ namespace EZLogger
                 };
                 _serverReportThread.Start();
             }
-            
+
             // 格式化错误消息，添加帧数和标签
             var formattedMessage = $"[FRAME:{GetCurrentFrameCount()}][{tag}]{message}";
-            
+
             // 将消息加入队列等待上报
             lock (_errorQueueLock)
             {

@@ -13,113 +13,113 @@ namespace EZLogger.Editor
         [Header("基础配置")]
         [Tooltip("全局启用的日志级别")]
         public LogLevel globalEnabledLevels = LogLevel.All;
-        
+
         [Tooltip("性能模式（零GC分配）")]
         public bool performanceMode = false;
-        
+
         [Tooltip("启用堆栈跟踪")]
         public bool enableStackTrace = true;
-        
+
         [Tooltip("堆栈跟踪的最小级别")]
         public LogLevel stackTraceMinLevel = LogLevel.Warning;
-        
+
         [Tooltip("最大堆栈跟踪深度")]
         [Range(1, 50)]
         public int maxStackTraceDepth = 10;
-        
+
         [Header("异步处理")]
         [Tooltip("启用异步写入")]
         public bool enableAsyncWrite = true;
-        
+
         [Tooltip("日志队列最大大小")]
         [Range(100, 10000)]
         public int maxQueueSize = 1000;
-        
+
         [Tooltip("日志缓冲区大小")]
         [Range(1024, 65536)]
         public int bufferSize = 4096;
-        
+
         [Header("Unity控制台")]
         [Tooltip("启用Unity控制台输出")]
         public bool unityConsoleEnabled = true;
-        
+
         [Tooltip("启用颜色")]
         public bool unityConsoleColors = true;
-        
+
         [Tooltip("显示帧数")]
         public bool unityConsoleShowFrame = true;
-        
+
         [Tooltip("显示线程ID")]
         public bool unityConsoleShowThread = false;
-        
+
         [Tooltip("Unity控制台最小输出级别")]
         public LogLevel unityConsoleMinLevel = LogLevel.Log;
-        
+
         [Header("文件输出")]
         [Tooltip("启用文件输出")]
         public bool fileOutputEnabled = true;
-        
+
         [Tooltip("日志文件目录")]
         public string logDirectory = "Logs";
-        
+
         [Tooltip("日志文件名模板")]
         public string fileNameTemplate = "log_{0:yyyyMMdd}.txt";
-        
+
         [Tooltip("最大文件大小（MB）")]
         [Range(1, 100)]
         public float maxFileSizeMB = 10f;
-        
+
         [Tooltip("文件轮转时保留的大小（MB）")]
         [Range(1, 50)]
         public float keepSizeMB = 5f;
-        
+
         [Tooltip("启用文件大小检查")]
         public bool enableSizeCheck = true;
-        
+
         [Tooltip("文件大小检查间隔（秒）")]
         [Range(10, 600)]
         public int sizeCheckInterval = 60;
-        
+
         [Tooltip("启用文件压缩")]
         public bool enableFileCompression = false;
-        
+
         [Header("服务器上报")]
         [Tooltip("启用服务器上报")]
         public bool serverReportEnabled = false;
-        
+
         [Tooltip("服务器URL")]
         public string serverUrl = "";
-        
+
         [Tooltip("发送超时时间（毫秒）")]
         [Range(1000, 30000)]
         public int timeoutMs = 3000;
-        
+
         [Tooltip("重试次数")]
         [Range(0, 10)]
         public int retryCount = 3;
-        
+
         [Tooltip("批量发送大小")]
         [Range(1, 100)]
         public int batchSize = 10;
-        
+
         [Tooltip("发送间隔（毫秒）")]
         [Range(100, 10000)]
         public int sendInterval = 1000;
-        
+
         [Tooltip("服务器上报最小级别")]
         public LogLevel serverMinLevel = LogLevel.Warning;
-        
+
         [Tooltip("启用服务器数据压缩")]
         public bool enableServerCompression = true;
-        
+
         [Header("系统监控")]
         [Tooltip("启用系统日志监控")]
         public bool enableSystemLogMonitor = true;
-        
+
         [Header("扩展数据")]
         [Tooltip("收集设备信息")]
         public bool collectDeviceInfo = true;
-        
+
         [Tooltip("收集性能信息")]
         public bool collectPerformanceInfo = false;
 
@@ -231,7 +231,7 @@ namespace EZLogger.Editor
         }
 
         private static EZLoggerSettings s_instance;
-        
+
         /// <summary>
         /// 获取或创建设置实例
         /// </summary>

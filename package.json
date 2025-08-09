@@ -1,6 +1,6 @@
 {
   "name": "com.ezgame.logger",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "displayName": "EZ Logger",
   "description": "A high-performance, zero-allocation logging system for Unity with multi-level support and server integration.",
   "unity": "2020.3",

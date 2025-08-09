@@ -36,13 +36,13 @@ namespace EZLogger.Appenders
             }
         }
 
-                protected override void WriteLogCore(LogMessage message)
+        protected override void WriteLogCore(LogMessage message)
         {
             string formattedMessage = FormatMessage(message);
-            
+
             // 直接使用Unity LogType，完全对齐
             var unityLogType = message.Level.ToUnityLogType();
-            
+
             switch (unityLogType)
             {
                 case UnityEngine.LogType.Error:

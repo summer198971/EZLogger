@@ -2,7 +2,8 @@
     "name": "EZLogger.Editor",
     "rootNamespace": "EZLogger.Editor",
     "references": [
-        "EZLogger.Runtime"
+        "EZLogger.Runtime",
+        "Unity.Settings.Editor"
     ],
     "includePlatforms": [
         "Editor"
