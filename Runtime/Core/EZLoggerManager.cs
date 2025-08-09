@@ -97,6 +97,9 @@ namespace EZLogger
             {
                 _configuration = value ?? LoggerConfiguration.CreateDefault();
                 EnabledLevels = _configuration.GlobalEnabledLevels;
+                
+                // 运行时重新配置输出器
+                RefreshAppenders();
             }
         }
 
@@ -190,12 +193,151 @@ namespace EZLogger
         }
 #endif
 
+        /// <summary>
+        /// 添加默认输出器（仅在初始化时调用）
+        /// </summary>
         private void AddDefaultAppenders()
         {
-            // 添加Unity控制台输出器
-            var unityAppender = new UnityAppender();
-            unityAppender.Initialize(_configuration.UnityConsole);
-            AddAppender(unityAppender);
+            RefreshAppenders();
+        }
+
+        /// <summary>
+        /// 刷新输出器配置 - 支持运行时动态启用/禁用
+        /// </summary>
+        private void RefreshAppenders()
+        {
+            if (_configuration == null || _isDisposed)
+                return;
+
+            // 管理Unity控制台输出器
+            ManageUnityAppender();
+            
+            // 管理文件输出器
+            ManageFileAppender();
+        }
+
+        /// <summary>
+        /// 管理Unity控制台输出器的启用/禁用
+        /// </summary>
+        private void ManageUnityAppender()
+        {
+            const string UNITY_APPENDER_NAME = "Unity Console";
+            var existingAppender = GetAppenderByName(UNITY_APPENDER_NAME);
+            
+            if (_configuration.UnityConsole.Enabled)
+            {
+                if (existingAppender == null)
+                {
+                    // 需要创建新的Unity输出器
+                    try
+                    {
+                        var unityAppender = new UnityAppender();
+                        unityAppender.Initialize(_configuration.UnityConsole);
+                        AddAppender(unityAppender);
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to initialize Unity appender: {ex.Message}", ex));
+                    }
+                }
+                else
+                {
+                    // 已存在，重新配置
+                    try
+                    {
+                        existingAppender.Initialize(_configuration.UnityConsole);
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to reconfigure Unity appender: {ex.Message}", ex));
+                    }
+                }
+            }
+            else
+            {
+                // 需要移除Unity输出器
+                if (existingAppender != null)
+                {
+                    RemoveAppender(existingAppender);
+                    try
+                    {
+                        existingAppender.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to dispose Unity appender: {ex.Message}", ex));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 管理文件输出器的启用/禁用
+        /// </summary>
+        private void ManageFileAppender()
+        {
+            const string FILE_APPENDER_NAME = "FileAppender";
+            var existingAppender = GetAppenderByName(FILE_APPENDER_NAME);
+            
+            if (_configuration.FileOutput.Enabled)
+            {
+                if (existingAppender == null)
+                {
+                    // 需要创建新的文件输出器
+                    try
+                    {
+                        var fileAppender = new FileAppender();
+                        fileAppender.Initialize(_configuration.FileOutput);
+                        AddAppender(fileAppender);
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to initialize File appender: {ex.Message}", ex));
+                    }
+                }
+                else
+                {
+                    // 已存在，重新配置
+                    try
+                    {
+                        existingAppender.Initialize(_configuration.FileOutput);
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to reconfigure File appender: {ex.Message}", ex));
+                    }
+                }
+            }
+            else
+            {
+                // 需要移除文件输出器
+                if (existingAppender != null)
+                {
+                    RemoveAppender(existingAppender);
+                    try
+                    {
+                        existingAppender.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(new Exception($"Failed to dispose File appender: {ex.Message}", ex));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 根据名称获取输出器
+        /// </summary>
+        private ILogAppender GetAppenderByName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return null;
+
+            lock (_appendersLock)
+            {
+                return _appenders.FirstOrDefault(a => a.Name == name);
+            }
         }
 
         private void InitializeConditionalLoggers()
@@ -845,6 +987,14 @@ namespace EZLogger
         /// 获取服务器上报URL
         /// </summary>
         public string GetServerReportUrl() => _serverUrl;
+
+        /// <summary>
+        /// 手动刷新输出器配置 - 当用户在运行时修改配置后调用
+        /// </summary>
+        public void RefreshConfiguration()
+        {
+            RefreshAppenders();
+        }
         #endregion
 
         #region 刷新和释放
@@ -1148,6 +1298,9 @@ namespace EZLogger
 
         /// <summary>设置扩展上报数据</summary>
         public static void SetReportExtraData(string key, object data) => EZLoggerManager.Instance.SetReportExtraData(key, data);
+
+        /// <summary>手动刷新输出器配置</summary>
+        public static void RefreshConfiguration() => EZLoggerManager.Instance.RefreshConfiguration();
         #endregion
     }
 }
