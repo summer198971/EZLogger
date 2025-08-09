@@ -296,20 +296,8 @@ namespace EZLogger.Appenders
         /// </summary>
         private DateTime GetConfiguredTime()
         {
-            try
-            {
-                var manager = EZLoggerManager.Instance;
-                if (manager?.Configuration?.Timezone != null)
-                {
-                    return manager.Configuration.Timezone.GetCurrentTime();
-                }
-            }
-            catch
-            {
-                // 如果获取配置失败，回退到UTC时间
-            }
-
-            // 默认使用UTC时间
+            // 🚨 关键修复：避免在初始化期间调用单例，防止死循环
+            // 直接使用UTC时间，避免递归调用EZLoggerManager.Instance
             return DateTime.UtcNow;
         }
 
