@@ -38,7 +38,7 @@ namespace EZLogger
         }
 
         /// <summary>
-        /// 带防重复机制的日志记录
+        /// 带防重复机制的日志记录（包含服务器上报）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void LogWithPreventDuplicate(string tag, string message)
@@ -49,6 +49,12 @@ namespace EZLogger
             {
                 // 通过正常的日志管道输出，由UnityAppender负责Unity控制台输出
                 _logger.Log(_level, tag, message);
+                
+                // 如果是EZLoggerManager实例，且启用服务器上报，则上报零开销API的错误
+                if (_logger is EZLoggerManager manager && manager.IsServerReportingEnabled)
+                {
+                    manager.ReportToServerWithSource(message, _level, "ZeroGCAPI", tag);
+                }
             }
             finally
             {
