@@ -36,17 +36,17 @@ EZ Logger 提供直观的图形化配置界面，支持功能状态透明化和�
 
 ### 打开设置界面
 
-**方式一：Unity Tools菜单（推荐）**
+**Unity项目设置（推荐）**
+```
+Edit → Project Settings → EZ Logger
+```
+在Unity项目设置中配置EZ Logger，支持所有功能的图形化设置。
+
+**备用方式：Tools菜单**
 ```
 Tools → EZ Logger → Open Settings
 ```
-在Inspector面板中编辑配置，支持所有配置项的可视化编辑。
-
-**方式二：手动创建设置资源**
-```
-Tools → EZ Logger → Create Settings Asset
-```
-创建配置文件：`Assets/Settings/EZLoggerSettings.asset`
+直接访问设置资源文件进行配置。
 
 ### 功能实现状态
 
