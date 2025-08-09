@@ -69,7 +69,7 @@ namespace EZLogger.Editor
 
             showSystemSettings = DrawFoldoutSection("系统监控", showSystemSettings, DrawSystemSettings);
             EditorGUILayout.Space();
-            
+
             DrawFoldoutSection("时区配置", true, DrawTimezoneSettings);
             EditorGUILayout.Space();
 
@@ -279,10 +279,10 @@ namespace EZLogger.Editor
             }
         }
 
-                private void DrawSystemSettings()
+        private void DrawSystemSettings()
         {
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableSystemLogMonitor"), new GUIContent("启用系统日志监控"));
-            
+
             EditorGUILayout.Space(5);
             EditorGUILayout.HelpBox("系统监控说明:\n• 自动捕获Unity内部错误和异常\n• 与自己API的错误进行防重复处理\n• 支持错误自动上报到服务器", MessageType.Info);
         }
@@ -290,7 +290,7 @@ namespace EZLogger.Editor
         private void DrawTimezoneSettings()
         {
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("useUtcTime"), new GUIContent("使用UTC时间"));
-            
+
             if (!settings.useUtcTime)
             {
                 EditorGUI.indentLevel++;
@@ -298,14 +298,14 @@ namespace EZLogger.Editor
                 EditorGUILayout.HelpBox("时区ID示例:\n• China Standard Time\n• UTC\n• Eastern Standard Time\n• Pacific Standard Time", MessageType.Info);
                 EditorGUI.indentLevel--;
             }
-            
+
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("timeFormat"), new GUIContent("时间格式"));
-            
+
             EditorGUILayout.Space(5);
-            
+
             // 显示当前时间示例
             EditorGUILayout.LabelField("时间示例:", EditorStyles.boldLabel);
-            
+
             try
             {
                 var timezone = new TimezoneConfig
@@ -314,7 +314,7 @@ namespace EZLogger.Editor
                     TimezoneId = settings.customTimezoneId,
                     TimeFormat = settings.timeFormat
                 };
-                
+
                 string currentTime = timezone.FormatTime();
                 EditorGUILayout.LabelField($"  当前时间: {currentTime}");
                 EditorGUILayout.LabelField($"  时区: {(settings.useUtcTime ? "UTC" : (string.IsNullOrEmpty(settings.customTimezoneId) ? "本地时间" : settings.customTimezoneId))}");

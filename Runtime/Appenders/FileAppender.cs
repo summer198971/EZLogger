@@ -99,12 +99,12 @@ namespace EZLogger.Appenders
                     if (message.HasValue)
                     {
                         WriteToFile(message.Value);
-                                         }
-                     else
-                     {
-                         Thread.Sleep(10);
-                     }
-                 }
+                    }
+                    else
+                    {
+                        Thread.Sleep(10);
+                    }
+                }
                 catch (ThreadAbortException)
                 {
                     // 线程被主动终止，正常行为
