@@ -49,6 +49,7 @@ namespace EZLogger
         private readonly Thread _writeThread;
         private volatile bool _isRunning;
         private volatile bool _isDisposed;
+        private volatile bool _isInitializing;
 
         private LoggerConfiguration _configuration;
         private readonly Dictionary<LogLevel, ConditionalLogger> _conditionalLoggers = new Dictionary<LogLevel, ConditionalLogger>();
@@ -89,7 +90,7 @@ namespace EZLogger
         /// <summary>日志级别变化事件</summary>
         public static event System.Action<LogLevel> OnLevelsChanged;
 
-        /// <summary>当前配置</summary>
+                /// <summary>当前配置</summary>
         public LoggerConfiguration Configuration
         {
             get => _configuration;
@@ -97,9 +98,12 @@ namespace EZLogger
             {
                 _configuration = value ?? LoggerConfiguration.CreateDefault();
                 EnabledLevels = _configuration.GlobalEnabledLevels;
-
-                // 运行时重新配置输出器
-                RefreshAppenders();
+                
+                // 运行时重新配置输出器（初始化时跳过，避免递归调用）
+                if (!_isInitializing)
+                {
+                    RefreshAppenders();
+                }
             }
         }
 
@@ -142,6 +146,9 @@ namespace EZLogger
         #region 构造函数和初始化
         private EZLoggerManager()
         {
+            // 标记正在初始化，防止递归调用
+            _isInitializing = true;
+            
             _configuration = LoggerConfiguration.CreateDefault();
             _logQueue = new ThreadSafeQueue<LogMessage>(_configuration.MaxQueueSize);
 
@@ -157,9 +164,6 @@ namespace EZLogger
                 _writeThread.Start();
             }
 
-            // 添加默认的Unity输出器
-            AddDefaultAppenders();
-
             // 初始化条件日志记录器
             InitializeConditionalLoggers();
 
@@ -169,10 +173,16 @@ namespace EZLogger
             // 初始化设备信息
             InitializeDeviceInfo();
 
+            // 添加默认的Unity输出器（在所有其他初始化完成后）
+            AddDefaultAppenders();
+
             // 注册Unity应用退出事件
 #if UNITY_2018_1_OR_NEWER
             UnityEngine.Application.quitting += OnApplicationQuitting;
 #endif
+            
+            // 初始化完成
+            _isInitializing = false;
         }
 
 #if UNITY_2018_1_OR_NEWER
@@ -198,20 +208,40 @@ namespace EZLogger
         /// </summary>
         private void AddDefaultAppenders()
         {
-            RefreshAppenders();
+            // 初始化时直接创建输出器，不通过RefreshAppenders避免递归
+            try
+            {
+                if (_configuration.UnityConsole.Enabled)
+                {
+                    var unityAppender = new UnityAppender();
+                    unityAppender.Initialize(_configuration.UnityConsole);
+                    AddAppender(unityAppender);
+                }
+
+                if (_configuration.FileOutput.Enabled)
+                {
+                    var fileAppender = new FileAppender();
+                    fileAppender.Initialize(_configuration.FileOutput);
+                    AddAppender(fileAppender);
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleInternalError(new Exception($"Failed to initialize default appenders: {ex.Message}", ex));
+            }
         }
 
-        /// <summary>
+                /// <summary>
         /// 刷新输出器配置 - 支持运行时动态启用/禁用
         /// </summary>
         private void RefreshAppenders()
         {
-            if (_configuration == null || _isDisposed)
+            if (_configuration == null || _isDisposed || _isInitializing)
                 return;
 
             // 管理Unity控制台输出器
             ManageUnityAppender();
-
+            
             // 管理文件输出器
             ManageFileAppender();
         }
