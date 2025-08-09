@@ -225,7 +225,7 @@ namespace EZLogger
             // 如果启用服务器上报且是错误或异常，则上报
             if (_serverReportingEnabled && (logLevel == LogLevel.Error || logLevel == LogLevel.Exception))
             {
-                ReportToServer(message, logLevel);
+                ReportToServer(message, logLevel, "System");
             }
         }
 
@@ -393,11 +393,11 @@ namespace EZLogger
             try
             {
                 Log(LogLevel.Error, tag, message);
-                
+
                 // 如果启用服务器上报，则上报自己API的错误
                 if (_serverReportingEnabled)
                 {
-                    ReportToServerWithSource(message, LogLevel.Error, "CustomAPI", tag);
+                    ReportToServer(message, LogLevel.Error, tag);
                 }
             }
             finally
@@ -416,11 +416,11 @@ namespace EZLogger
             try
             {
                 Log(LogLevel.Exception, tag, message);
-                
+
                 // 如果启用服务器上报，则上报自己API的异常
                 if (_serverReportingEnabled)
                 {
-                    ReportToServerWithSource(message, LogLevel.Exception, "CustomAPI", tag);
+                    ReportToServer(message, LogLevel.Exception, tag);
                 }
             }
             finally
@@ -581,23 +581,12 @@ namespace EZLogger
         public bool IsServerReportingEnabled => _serverReportingEnabled;
 
                 /// <summary>
-        /// 上报错误到服务器（系统抓取的错误）
+        /// 上报错误到服务器（统一入口）
         /// </summary>
         /// <param name="message">错误消息</param>
         /// <param name="logLevel">日志级别</param>
-        private void ReportToServer(string message, LogLevel logLevel)
-        {
-            ReportToServerWithSource(message, logLevel, "SystemError", "System");
-        }
-
-        /// <summary>
-        /// 上报错误到服务器（带来源标识）
-        /// </summary>
-        /// <param name="message">错误消息</param>
-        /// <param name="logLevel">日志级别</param>
-        /// <param name="source">错误来源标识（SystemError、CustomAPI等）</param>
-        /// <param name="tag">日志标签</param>
-        internal void ReportToServerWithSource(string message, LogLevel logLevel, string source, string tag)
+        /// <param name="tag">日志标签（用于区分来源：System=系统抓取，其他=自己API）</param>
+        internal void ReportToServer(string message, LogLevel logLevel, string tag = "System")
         {
             // 如果没有配置服务器地址，跳过上报
             if (string.IsNullOrEmpty(_serverUrl))
@@ -617,8 +606,8 @@ namespace EZLogger
                 _serverReportThread.Start();
             }
             
-            // 格式化错误消息，添加帧数、来源标识和标签
-            var formattedMessage = $"[FRAME:{GetCurrentFrameCount()}][{source}][{tag}]{message}";
+            // 格式化错误消息，添加帧数和标签
+            var formattedMessage = $"[FRAME:{GetCurrentFrameCount()}][{tag}]{message}";
             
             // 将消息加入队列等待上报
             lock (_errorQueueLock)
