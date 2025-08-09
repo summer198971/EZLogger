@@ -11,6 +11,7 @@ namespace EZLogger.Appenders
     public class FileAppender : LogAppenderBase
     {
         private FileOutputConfig? _config;
+        private TimezoneConfig? _timezoneConfig;
         private FileStream? _fileStream;
         private StreamWriter? _streamWriter;
         private string? _currentFilePath;
@@ -44,6 +45,15 @@ namespace EZLogger.Appenders
                 StartWriteThread();
                 StartSizeCheckTimer();
             }
+        }
+        
+        /// <summary>
+        /// 初始化文件输出器，支持传入时区配置
+        /// </summary>
+        public void Initialize(FileOutputConfig config, TimezoneConfig timezoneConfig)
+        {
+            _timezoneConfig = timezoneConfig;
+            Initialize(config);
         }
 
         /// <summary>
@@ -296,8 +306,22 @@ namespace EZLogger.Appenders
         /// </summary>
         private DateTime GetConfiguredTime()
         {
-            // 🚨 关键修复：避免在初始化期间调用单例，防止死循环
-            // 直接使用UTC时间，避免递归调用EZLoggerManager.Instance
+            // 🎯 智能时区处理：使用存储的时区配置，避免循环调用
+            
+            // 如果有时区配置，使用它
+            if (_timezoneConfig != null)
+            {
+                try
+                {
+                    return _timezoneConfig.GetCurrentTime();
+                }
+                catch
+                {
+                    // 配置的时区有问题，回退到UTC
+                }
+            }
+            
+            // 默认使用UTC时间（初始化时或配置无效时）
             return DateTime.UtcNow;
         }
 

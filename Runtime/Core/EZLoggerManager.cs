@@ -90,7 +90,7 @@ namespace EZLogger
         /// <summary>日志级别变化事件</summary>
         public static event System.Action<LogLevel> OnLevelsChanged;
 
-                /// <summary>当前配置</summary>
+        /// <summary>当前配置</summary>
         public LoggerConfiguration Configuration
         {
             get => _configuration;
@@ -98,7 +98,7 @@ namespace EZLogger
             {
                 _configuration = value ?? LoggerConfiguration.CreateDefault();
                 EnabledLevels = _configuration.GlobalEnabledLevels;
-                
+
                 // 运行时重新配置输出器（初始化时跳过，避免递归调用）
                 if (!_isInitializing)
                 {
@@ -148,7 +148,7 @@ namespace EZLogger
         {
             // 标记正在初始化，防止递归调用
             _isInitializing = true;
-            
+
             _configuration = LoggerConfiguration.CreateDefault();
             _logQueue = new ThreadSafeQueue<LogMessage>(_configuration.MaxQueueSize);
 
@@ -180,7 +180,7 @@ namespace EZLogger
 #if UNITY_2018_1_OR_NEWER
             UnityEngine.Application.quitting += OnApplicationQuitting;
 #endif
-            
+
             // 初始化完成
             _isInitializing = false;
         }
@@ -221,7 +221,7 @@ namespace EZLogger
                 if (_configuration.FileOutput.Enabled)
                 {
                     var fileAppender = new FileAppender();
-                    fileAppender.Initialize(_configuration.FileOutput);
+                    fileAppender.Initialize(_configuration.FileOutput, _configuration.Timezone);
                     AddAppender(fileAppender);
                 }
             }
@@ -231,7 +231,7 @@ namespace EZLogger
             }
         }
 
-                /// <summary>
+        /// <summary>
         /// 刷新输出器配置 - 支持运行时动态启用/禁用
         /// </summary>
         private void RefreshAppenders()
@@ -241,7 +241,7 @@ namespace EZLogger
 
             // 管理Unity控制台输出器
             ManageUnityAppender();
-            
+
             // 管理文件输出器
             ManageFileAppender();
         }
@@ -317,7 +317,7 @@ namespace EZLogger
                     try
                     {
                         var fileAppender = new FileAppender();
-                        fileAppender.Initialize(_configuration.FileOutput);
+                        fileAppender.Initialize(_configuration.FileOutput, _configuration.Timezone);
                         AddAppender(fileAppender);
                     }
                     catch (Exception ex)
@@ -569,7 +569,7 @@ namespace EZLogger
             if (!IsLevelEnabled(level))
                 return;
 
-            var logMessage = new LogMessage(level, tag, message, null, GetCurrentFrameCount());
+            var logMessage = new LogMessage(level, tag, message, null, GetCurrentFrameCount(), _configuration?.Timezone);
             Log(logMessage);
         }
 
