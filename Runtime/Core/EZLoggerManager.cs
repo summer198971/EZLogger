@@ -165,7 +165,30 @@ namespace EZLogger
 
             // 初始化设备信息
             InitializeDeviceInfo();
+
+            // 注册Unity应用退出事件
+#if UNITY_2018_1_OR_NEWER
+            UnityEngine.Application.quitting += OnApplicationQuitting;
+#endif
         }
+
+#if UNITY_2018_1_OR_NEWER
+        /// <summary>
+        /// Unity应用退出时的处理
+        /// </summary>
+        private void OnApplicationQuitting()
+        {
+            // 在应用退出时主动释放资源
+            try
+            {
+                Dispose();
+            }
+            catch (ThreadAbortException)
+            {
+                // 忽略线程终止异常
+            }
+        }
+#endif
 
         private void AddDefaultAppenders()
         {
@@ -453,9 +476,15 @@ namespace EZLogger
                         Thread.Sleep(10);
                     }
                 }
+                catch (ThreadAbortException)
+                {
+                    // 线程被主动终止（通常发生在Unity编辑器停止播放模式时）
+                    // 这是正常行为，不需要记录错误
+                    break;
+                }
                 catch (Exception ex)
                 {
-                    // 记录写入线程错误，但不能使用自己的日志系统
+                    // 其他异常才需要记录
                     HandleInternalError(ex);
                 }
             }
@@ -638,6 +667,11 @@ namespace EZLogger
                     try
                     {
                         SendErrorToServer(errorMessage);
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // 线程被主动终止，正常行为
+                        break;
                     }
                     catch (ObjectDisposedException)
                     {
@@ -859,11 +893,39 @@ namespace EZLogger
 
             // 停止写入线程
             _isRunning = false;
-            _writeThread?.Join(1000);
+            if (_writeThread != null && _writeThread.IsAlive)
+            {
+                if (!_writeThread.Join(1000))
+                {
+                    // 如果线程在1秒内没有正常结束，强制终止
+                    try
+                    {
+                        _writeThread.Abort();
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // 忽略线程终止异常
+                    }
+                }
+            }
 
             // 停止服务器上报线程
             _isServerReportRunning = false;
-            _serverReportThread?.Join(1000);
+            if (_serverReportThread != null && _serverReportThread.IsAlive)
+            {
+                if (!_serverReportThread.Join(1000))
+                {
+                    // 如果线程在1秒内没有正常结束，强制终止
+                    try
+                    {
+                        _serverReportThread.Abort();
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // 忽略线程终止异常
+                    }
+                }
+            }
 
             // 停止系统日志监控
             if (_systemLogMonitorEnabled)

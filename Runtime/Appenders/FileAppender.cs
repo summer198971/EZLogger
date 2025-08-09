@@ -84,26 +84,31 @@ namespace EZLogger.Appenders
         {
             while (_isWriteThreadRunning)
             {
-                                 try
-                 {
-                     LogMessage? message = null;
-                     
-                     lock (_queueLock)
-                     {
-                         if (_messageQueue.Count > 0)
-                         {
-                             message = _messageQueue.Dequeue();
-                         }
-                     }
+                try
+                {
+                    LogMessage? message = null;
 
-                     if (message.HasValue)
-                     {
-                         WriteToFile(message.Value);
-                     }
+                    lock (_queueLock)
+                    {
+                        if (_messageQueue.Count > 0)
+                        {
+                            message = _messageQueue.Dequeue();
+                        }
+                    }
+
+                    if (message.HasValue)
+                    {
+                        WriteToFile(message.Value);
+                                         }
                      else
                      {
                          Thread.Sleep(10);
                      }
+                 }
+                catch (ThreadAbortException)
+                {
+                    // 线程被主动终止，正常行为
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -138,7 +143,7 @@ namespace EZLogger.Appenders
         /// <summary>
         /// 格式化日志消息
         /// </summary>
-                private string FormatLogMessage(LogMessage message)
+        private string FormatLogMessage(LogMessage message)
         {
             var timestamp = message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
             return $"[{timestamp}] [{message.Level}] [{message.Tag}] {message.Message}";
@@ -171,32 +176,32 @@ namespace EZLogger.Appenders
         /// <summary>
         /// 获取日志目录路径
         /// </summary>
-                private string GetLogDirectoryPath()
+        private string GetLogDirectoryPath()
         {
             string logDir = _config?.LogDirectory ?? "";
-            
+
             if (string.IsNullOrEmpty(logDir))
             {
                 logDir = Path.Combine(UnityEngine.Application.persistentDataPath, "Logs");
             }
-            
+
             if (!Directory.Exists(logDir))
             {
                 Directory.CreateDirectory(logDir);
             }
-            
+
             return logDir;
         }
 
         /// <summary>
         /// 启动文件大小检查定时器
         /// </summary>
-                private void StartSizeCheckTimer()
+        private void StartSizeCheckTimer()
         {
             if (_config?.EnableSizeCheck != true || _config.SizeCheckInterval <= 0)
                 return;
 
-            _sizeCheckTimer = new Timer(CheckFileSize, null, 
+            _sizeCheckTimer = new Timer(CheckFileSize, null,
                 TimeSpan.FromSeconds(_config.SizeCheckInterval),
                 TimeSpan.FromSeconds(_config.SizeCheckInterval));
         }
@@ -350,7 +355,21 @@ namespace EZLogger.Appenders
 
             // 停止写入线程
             _isWriteThreadRunning = false;
-            _writeThread?.Join(1000);
+            if (_writeThread != null && _writeThread.IsAlive)
+            {
+                if (!_writeThread.Join(1000))
+                {
+                    // 如果线程在1秒内没有正常结束，强制终止
+                    try
+                    {
+                        _writeThread.Abort();
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        // 忽略线程终止异常
+                    }
+                }
+            }
 
             // 关闭文件流
             lock (_fileLock)
