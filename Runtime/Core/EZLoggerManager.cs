@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading;
 using EZLogger.Appenders;
 using EZLogger.Utils;
@@ -52,6 +56,14 @@ namespace EZLogger
         // 系统日志监控
         private bool _systemLogMonitorEnabled;
         private bool _serverReportingEnabled;
+
+        // 服务器上报相关
+        private readonly Queue<string> _errorQueue = new Queue<string>();
+        private readonly object _errorQueueLock = new object();
+        private Thread _serverReportThread;
+        private volatile bool _isServerReportRunning;
+        private readonly Dictionary<string, object> _reportExtraData = new Dictionary<string, object>();
+        private string _serverUrl = string.Empty;
 
         /// <summary>日志记录器名称</summary>
         public string Name => "EZLogger";
@@ -150,6 +162,9 @@ namespace EZLogger
 
             // 初始化系统日志监控
             InitializeSystemLogMonitor();
+
+            // 初始化设备信息
+            InitializeDeviceInfo();
         }
 
         private void AddDefaultAppenders()
@@ -178,6 +193,27 @@ namespace EZLogger
             SystemLogMonitor.Instance.OnSystemLogReceived += OnSystemLogReceived;
         }
 
+        private void InitializeDeviceInfo()
+        {
+            try
+            {
+                // 收集设备信息，参考原始代码
+                SetReportExtraData("platform", UnityEngine.Application.platform.ToString());
+                SetReportExtraData("version", UnityEngine.Application.version);
+                SetReportExtraData("bundleIdentifier", UnityEngine.Application.identifier);
+                SetReportExtraData("productName", UnityEngine.Application.productName);
+                SetReportExtraData("deviceModel", UnityEngine.SystemInfo.deviceModel);
+                SetReportExtraData("operatingSystem", UnityEngine.SystemInfo.operatingSystem);
+                SetReportExtraData("graphicsDeviceName", UnityEngine.SystemInfo.graphicsDeviceName);
+                SetReportExtraData("systemMemorySize", UnityEngine.SystemInfo.systemMemorySize);
+                SetReportExtraData("timestamp", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            }
+            catch (Exception ex)
+            {
+                HandleInternalError(ex);
+            }
+        }
+
         private void OnSystemLogReceived(string condition, string stackTrace, LogLevel logLevel)
         {
             // 构建系统错误消息
@@ -190,7 +226,6 @@ namespace EZLogger
             if (_serverReportingEnabled && (logLevel == LogLevel.Error || logLevel == LogLevel.Exception))
             {
                 ReportToServer(message, logLevel);
-                TriggerServerReport(message, logLevel);
             }
         }
 
@@ -533,34 +568,236 @@ namespace EZLogger
         /// </summary>
         public bool IsServerReportingEnabled => _serverReportingEnabled;
 
-        /// <summary>
-        /// 上报错误到服务器（内部实现，可通过事件扩展）
+                /// <summary>
+        /// 上报错误到服务器（参考原始PushError逻辑）
         /// </summary>
         /// <param name="message">错误消息</param>
         /// <param name="logLevel">日志级别</param>
         private void ReportToServer(string message, LogLevel logLevel)
         {
-            // 默认实现：记录到专门的错误日志文件
-            // 实际项目中可以重写此方法实现HTTP上报
-                        var errorTag = logLevel == LogLevel.Exception ? "Exception" : "Error";
-            Log(LogLevel.Error, $"ServerReport_{errorTag}", message);
+            // 如果没有配置服务器地址，跳过上报（不重复记录日志）
+            if (string.IsNullOrEmpty(_serverUrl))
+            {
+                return;
+            }
             
-            // 示例：在实际项目中，这里可以实现HTTP上报逻辑
-            // PostToErrorServer(message, logLevel);
+            // 启动服务器上报线程（如果还没启动）
+            if (_serverReportThread == null && !string.IsNullOrEmpty(_serverUrl))
+            {
+                _isServerReportRunning = true;
+                _serverReportThread = new Thread(ProcessServerReportQueue)
+                {
+                    Name = "EZLogger-ServerReport",
+                    IsBackground = true
+                };
+                _serverReportThread.Start();
+            }
+            
+            // 格式化错误消息，添加帧数和系统标识
+            var formattedMessage = $"[FRAME:{GetCurrentFrameCount()}][SystemError]{message}";
+            
+            // 将消息加入队列等待上报
+            lock (_errorQueueLock)
+            {
+                _errorQueue.Enqueue(formattedMessage);
+            }
         }
 
         /// <summary>
-        /// 服务器上报事件 - 允许外部处理上报逻辑
+        /// 处理服务器上报队列的后台线程方法（参考原始ProcessLogQueue）
         /// </summary>
-        public event System.Action<string, LogLevel> OnServerReport;
-
-        /// <summary>
-        /// 触发服务器上报事件
-        /// </summary>
-        private void TriggerServerReport(string message, LogLevel logLevel)
+        private void ProcessServerReportQueue()
         {
-            OnServerReport?.Invoke(message, logLevel);
+            while (_isServerReportRunning && !_isDisposed)
+            {
+                string errorMessage = null;
+
+                lock (_errorQueueLock)
+                {
+                    if (_errorQueue.Count > 0)
+                    {
+                        errorMessage = _errorQueue.Dequeue();
+                    }
+                }
+
+                if (errorMessage != null)
+                {
+                    try
+                    {
+                        SendErrorToServer(errorMessage);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        HandleInternalError(ex);
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(50);
+                }
+            }
         }
+
+        /// <summary>
+        /// 发送错误到服务器（参考原始SendErrorLogServer方法）
+        /// </summary>
+        private void SendErrorToServer(string errorMessage)
+        {
+            try
+            {
+                // 构建JSON数据
+                var jsonData = BuildErrorReportJson(errorMessage);
+
+                // 发送HTTP请求
+                PostWebRequest(_serverUrl, jsonData);
+            }
+            catch (Exception ex)
+            {
+                HandleInternalError(ex);
+            }
+        }
+
+        /// <summary>
+        /// 构建错误上报的JSON数据
+        /// </summary>
+        private string BuildErrorReportJson(string errorMessage)
+        {
+            var jsonBuilder = new StringBuilder();
+            jsonBuilder.Append("{");
+
+            // 添加扩展数据
+            jsonBuilder.Append("\"extData\":");
+            jsonBuilder.Append(GetReportExtraDataJson());
+            jsonBuilder.Append(",");
+
+            // 添加错误消息
+            jsonBuilder.Append("\"msg\":\"");
+            jsonBuilder.Append(EscapeJsonString(errorMessage));
+            jsonBuilder.Append("\"");
+
+            jsonBuilder.Append("}");
+            return jsonBuilder.ToString();
+        }
+
+        /// <summary>
+        /// 获取扩展数据的JSON字符串
+        /// </summary>
+        private string GetReportExtraDataJson()
+        {
+            var jsonBuilder = new StringBuilder();
+            jsonBuilder.Append("{");
+
+            bool first = true;
+            foreach (var kvp in _reportExtraData)
+            {
+                if (!first)
+                    jsonBuilder.Append(",");
+
+                jsonBuilder.Append("\"");
+                jsonBuilder.Append(kvp.Key);
+                jsonBuilder.Append("\":\"");
+                jsonBuilder.Append(EscapeJsonString(kvp.Value?.ToString() ?? ""));
+                jsonBuilder.Append("\"");
+
+                first = false;
+            }
+
+            jsonBuilder.Append("}");
+            return jsonBuilder.ToString();
+        }
+
+        /// <summary>
+        /// JSON字符串转义
+        /// </summary>
+        private string EscapeJsonString(string str)
+        {
+            if (string.IsNullOrEmpty(str))
+                return "";
+
+            return str.Replace("\\", "\\\\")
+                     .Replace("\"", "\\\"")
+                     .Replace("\n", "\\n")
+                     .Replace("\r", "\\r")
+                     .Replace("\t", "\\t");
+        }
+
+        /// <summary>
+        /// HTTP POST请求（参考原始PostWebRequest方法）
+        /// </summary>
+        private string PostWebRequest(string postUrl, string paramData)
+        {
+            string result = string.Empty;
+            try
+            {
+                byte[] byteArray = CompressString(paramData);
+                HttpWebRequest webReq = (HttpWebRequest)WebRequest.Create(new Uri(postUrl));
+                webReq.Method = "POST";
+                webReq.ContentType = "application/x-www-form-urlencoded";
+                webReq.Timeout = 3000;
+                webReq.ContentLength = byteArray.Length;
+
+                using (Stream newStream = webReq.GetRequestStream())
+                {
+                    newStream.Write(byteArray, 0, byteArray.Length);
+                }
+
+                using (HttpWebResponse response = (HttpWebResponse)webReq.GetResponse())
+                using (StreamReader sr = new StreamReader(response.GetResponseStream(), Encoding.Default))
+                {
+                    result = sr.ReadToEnd();
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleInternalError(ex);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 压缩字符串（参考原始CompressString方法）
+        /// </summary>
+        private byte[] CompressString(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                using (GZipStream gzip = new GZipStream(memoryStream, CompressionMode.Compress, true))
+                {
+                    gzip.Write(buffer, 0, buffer.Length);
+                }
+                return memoryStream.ToArray();
+            }
+        }
+
+        /// <summary>
+        /// 设置扩展上报数据
+        /// </summary>
+        public void SetReportExtraData(string key, object data)
+        {
+            if (string.IsNullOrEmpty(key))
+                return;
+
+            _reportExtraData[key] = data;
+        }
+
+        /// <summary>
+        /// 设置服务器上报URL
+        /// </summary>
+        public void SetServerReportUrl(string url)
+        {
+            _serverUrl = url ?? string.Empty;
+        }
+
+        /// <summary>
+        /// 获取服务器上报URL
+        /// </summary>
+        public string GetServerReportUrl() => _serverUrl;
         #endregion
 
         #region 刷新和释放
@@ -610,6 +847,10 @@ namespace EZLogger
             // 停止写入线程
             _isRunning = false;
             _writeThread?.Join(1000);
+
+            // 停止服务器上报线程
+            _isServerReportRunning = false;
+            _serverReportThread?.Join(1000);
 
             // 停止系统日志监控
             if (_systemLogMonitorEnabled)
@@ -824,14 +1065,14 @@ namespace EZLogger
         /// <summary>服务器上报是否启用</summary>
         public static bool IsServerReportingEnabled => EZLoggerManager.Instance.IsServerReportingEnabled;
 
-        /// <summary>
-        /// 注册服务器上报处理事件
-        /// </summary>
-        /// <param name="handler">上报处理器</param>
-        public static void OnServerReport(System.Action<string, LogLevel> handler)
-        {
-            EZLoggerManager.Instance.OnServerReport += handler;
-        }
+        /// <summary>设置服务器上报URL</summary>
+        public static void SetServerReportUrl(string url) => EZLoggerManager.Instance.SetServerReportUrl(url);
+
+        /// <summary>获取服务器上报URL</summary>
+        public static string GetServerReportUrl() => EZLoggerManager.Instance.GetServerReportUrl();
+
+        /// <summary>设置扩展上报数据</summary>
+        public static void SetReportExtraData(string key, object data) => EZLoggerManager.Instance.SetReportExtraData(key, data);
         #endregion
     }
 }
