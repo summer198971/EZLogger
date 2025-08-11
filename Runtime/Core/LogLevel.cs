@@ -11,7 +11,7 @@ namespace EZLogger
     {
         /// <summary>无日志输出</summary>
         None = 0,
-        
+
         // 与Unity LogType完全对齐的级别
         /// <summary>普通日志消息 (对应Unity LogType.Log)</summary>
         Log = 1 << 0,
@@ -23,7 +23,7 @@ namespace EZLogger
         Error = 1 << 3,
         /// <summary>异常消息 (对应Unity LogType.Exception)</summary>
         Exception = 1 << 4,
-        
+
         // 组合级别
         /// <summary>所有级别</summary>
         All = Log | Warning | Assert | Error | Exception,
@@ -34,7 +34,7 @@ namespace EZLogger
         /// <summary>错误和警告级别（向下兼容）</summary>
         ErrorAndWarning = Warning | Error | Exception
     }
-    
+
     /// <summary>
     /// 日志级别扩展方法
     /// </summary>
@@ -47,7 +47,7 @@ namespace EZLogger
         {
             return (current & level) == level;
         }
-        
+
         /// <summary>
         /// 获取日志级别的字符串表示
         /// </summary>
@@ -63,7 +63,23 @@ namespace EZLogger
                 _ => "U"
             };
         }
-        
+
+        /// <summary>
+        /// 获取日志级别的完整字符串表示（零GC实现）
+        /// </summary>
+        public static string ToLevelString(this LogLevel level)
+        {
+            return level switch
+            {
+                LogLevel.Log => "Log",
+                LogLevel.Warning => "Warning",
+                LogLevel.Assert => "Assert",
+                LogLevel.Error => "Error",
+                LogLevel.Exception => "Exception",
+                _ => "Unknown"
+            };
+        }
+
         /// <summary>
         /// 获取日志级别的颜色代码（用于Unity Console）
         /// </summary>
@@ -79,7 +95,7 @@ namespace EZLogger
                 _ => "white"
             };
         }
-        
+
         /// <summary>
         /// 转换为Unity LogType
         /// </summary>
@@ -95,7 +111,7 @@ namespace EZLogger
                 _ => UnityEngine.LogType.Log
             };
         }
-        
+
         /// <summary>
         /// 从Unity LogType转换
         /// </summary>

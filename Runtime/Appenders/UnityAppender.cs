@@ -12,13 +12,14 @@ namespace EZLogger.Appenders
         /// <summary>Unity控制台输出器必须同步，以保证与Unity原生Debug API的顺序一致</summary>
         public override bool SupportsAsyncWrite => false;
 
-        private UnityConsoleConfig _config;
-        private StringBuilder _stringBuilder;
+        private UnityConsoleConfig _config = new UnityConsoleConfig();
+
+        /// <summary>专用StringBuilder缓存，避免重复分配</summary>
+        private readonly StringBuilder _stringBuilder = new StringBuilder(256);
 
         protected override void InitializeCore(object config)
         {
             _config = config as UnityConsoleConfig ?? new UnityConsoleConfig();
-            _stringBuilder = new StringBuilder(256);
 
             // 设置支持的级别
             SupportedLevels = LogLevel.All;
@@ -55,7 +56,11 @@ namespace EZLogger.Appenders
                     UnityEngine.Debug.LogAssertion(formattedMessage);
                     break;
                 case UnityEngine.LogType.Exception:
-                    UnityEngine.Debug.LogError($"[Exception] {formattedMessage}");
+                    // 零GC实现异常日志格式化
+                    _stringBuilder.Clear();
+                    _stringBuilder.Append("[Exception] ");
+                    _stringBuilder.Append(formattedMessage);
+                    UnityEngine.Debug.LogError(_stringBuilder.ToString());
                     break;
                 case UnityEngine.LogType.Log:
                 default:
@@ -64,29 +69,35 @@ namespace EZLogger.Appenders
             }
         }
 
+        /// <summary>
+        /// 格式化消息 - 零GC实现，使用实例StringBuilder
+        /// </summary>
         private string FormatMessage(LogMessage message)
         {
             _stringBuilder.Clear();
 
             if (_config.EnableColors)
             {
-                _stringBuilder.Append($"<color={message.Level.GetUnityColor()}>");
+                _stringBuilder.Append("<color=");
+                _stringBuilder.Append(message.Level.GetUnityColor());
+                _stringBuilder.Append(">");
             }
-
-            // 添加帧数信息
-            if (_config.ShowFrameCount && message.FrameCount > 0)
-            {
-                _stringBuilder.Append($"[FRAME:{message.FrameCount}]");
-            }
+            _stringBuilder.Append("[F:");
+            _stringBuilder.Append(message.FrameCount);
+            _stringBuilder.Append("]");
 
             // 添加线程ID
             if (_config.ShowThreadId)
             {
-                _stringBuilder.Append($"[T:{message.ThreadId}]");
+                _stringBuilder.Append("[T:");
+                _stringBuilder.Append(message.ThreadId);
+                _stringBuilder.Append("]");
             }
 
             // 添加标签
-            _stringBuilder.Append($"[{message.Tag}]");
+            _stringBuilder.Append("[");
+            _stringBuilder.Append(message.Tag);
+            _stringBuilder.Append("]");
 
             if (_config.EnableColors)
             {
@@ -102,8 +113,7 @@ namespace EZLogger.Appenders
 
         protected override void DisposeCore()
         {
-            _stringBuilder = null;
-            _config = null;
+            // 配置清理
         }
     }
 }

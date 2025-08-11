@@ -153,7 +153,6 @@ namespace EZLogger.Editor
             {
                 Enabled = unityConsoleEnabled,
                 EnableColors = unityConsoleColors,
-                ShowFrameCount = unityConsoleShowFrame,
                 ShowThreadId = unityConsoleShowThread,
                 MinLevel = unityConsoleMinLevel
             };
@@ -211,7 +210,6 @@ namespace EZLogger.Editor
             {
                 unityConsoleEnabled = config.UnityConsole.Enabled;
                 unityConsoleColors = config.UnityConsole.EnableColors;
-                unityConsoleShowFrame = config.UnityConsole.ShowFrameCount;
                 unityConsoleShowThread = config.UnityConsole.ShowThreadId;
                 unityConsoleMinLevel = config.UnityConsole.MinLevel;
             }

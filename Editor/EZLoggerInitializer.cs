@@ -13,73 +13,72 @@ namespace EZLogger.Editor
     {
         static EZLoggerInitializer()
         {
-            // 编辑器启动时初始化
+            // 监听播放模式变化
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
+            // 编辑器启动时确保配置文件存在
+            EnsureConfigurationFilesExist();
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                // 进入播放模式时应用设置
-                ApplyProjectSettings();
+                // 进入播放模式时确保配置文件是最新的
+                ExportSettingsToRuntime();
             }
         }
 
         /// <summary>
-        /// 应用项目设置到运行时
+        /// 确保配置文件存在
         /// </summary>
-        public static void ApplyProjectSettings()
+        private static void EnsureConfigurationFilesExist()
         {
             try
             {
                 var settings = EZLoggerSettings.GetOrCreateSettings();
-                var manager = EZLoggerManager.Instance;
-                var config = settings.ToLoggerConfiguration();
-
-                // 应用主要配置
-                manager.Configuration = config;
-                manager.EnabledLevels = config.GlobalEnabledLevels;
-
-                // 应用系统监控
-                manager.EnableSystemLogMonitor(settings.enableSystemLogMonitor);
-
-                // 应用服务器配置
-                manager.EnableServerReporting(settings.serverReportEnabled);
-                if (!string.IsNullOrEmpty(settings.serverUrl))
-                {
-                    manager.SetServerReportUrl(settings.serverUrl);
-                }
-
-                // 设置设备信息收集
-                if (settings.collectDeviceInfo)
-                {
-                    manager.SetReportExtraData("configVersion", "ProjectSettings");
-                    manager.SetReportExtraData("timestamp", config.Timezone.FormatTime());
-                }
-
-                Debug.Log("[EZLogger] 项目设置已应用到运行时");
+                ExportSettingsToRuntime();
+                Debug.Log("[EZLogger] 编辑器启动时已确保配置文件存在");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[EZLogger] 应用项目设置失败: {e.Message}");
+                Debug.LogError($"[EZLogger] 确保配置文件存在失败: {e.Message}");
             }
         }
 
         /// <summary>
-        /// 菜单项：手动应用设置
+        /// 导出设置到运行时可访问的位置
         /// </summary>
-        [MenuItem("Tools/EZ Logger/Apply Settings")]
-        public static void ApplySettingsMenuItem()
+        private static void ExportSettingsToRuntime()
         {
-            if (Application.isPlaying)
+            try
             {
-                ApplyProjectSettings();
-                EditorUtility.DisplayDialog("设置应用", "EZ Logger设置已应用到运行时", "确定");
+                var settings = EZLoggerSettings.GetOrCreateSettings();
+                var config = settings.ToLoggerConfiguration();
+
+                // 导出到StreamingAssets供运行时加载
+                RuntimeSettingsLoader.SaveConfigurationToStreamingAssets(config);
             }
-            else
+            catch (System.Exception e)
             {
-                EditorUtility.DisplayDialog("提示", "请在播放模式下使用此功能", "确定");
+                Debug.LogError($"[EZLogger] 导出设置到运行时失败: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 菜单项：手动导出设置
+        /// </summary>
+        [MenuItem("Tools/EZ Logger/Export Settings to Runtime")]
+        public static void ExportSettingsMenuItem()
+        {
+            try
+            {
+                ExportSettingsToRuntime();
+                EditorUtility.DisplayDialog("导出完成", "EZ Logger设置已导出到StreamingAssets，运行时将自动加载", "确定");
+            }
+            catch (System.Exception e)
+            {
+                EditorUtility.DisplayDialog("导出失败", $"导出设置失败: {e.Message}", "确定");
             }
         }
 
@@ -104,7 +103,7 @@ namespace EZLogger.Editor
             settings.Save();
 
             Selection.activeObject = settings;
-            EditorGUIUtility.PingObject(settings);
+            // EditorGUIUtility.PingObject(settings); // 暂时注释掉避免IMGUI引用问题
 
             EditorUtility.DisplayDialog("创建完成",
                 $"默认设置已创建: {EZLoggerSettings.GetSettingsPath()}", "确定");
@@ -123,9 +122,9 @@ namespace EZLogger.Editor
             }
 
             // 测试各种日志级别
-            EZLog.LogLog("Test", "This is a log message");
-            EZLog.LogWarning("Test", "This is a warning message");
-            EZLog.LogError("Test", "This is an error message");
+            EZLog.Log?.Log("Test", "This is a log message");
+            EZLog.Warning?.Log("Test", "This is a warning message");
+            EZLog.Error?.Log("Test", "This is an error message");
 
             // 测试零开销API
             EZLog.Log?.Log("ZeroGC", "Zero GC log message");

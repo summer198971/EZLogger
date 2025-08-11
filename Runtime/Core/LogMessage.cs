@@ -49,7 +49,7 @@ namespace EZLogger
         private static DateTime GetConfiguredTime(TimezoneConfig timezoneConfig = null)
         {
             // 🎯 智能时区处理：支持传入时区配置，避免循环调用
-            
+
             // 如果有时区配置传入，使用它
             if (timezoneConfig != null)
             {
@@ -62,7 +62,7 @@ namespace EZLogger
                     // 配置的时区有问题，回退到UTC
                 }
             }
-            
+
             // 默认使用UTC时间（初始化时或配置无效时）
             return DateTime.UtcNow;
         }

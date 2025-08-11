@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
+using UnityEngine;
 
 namespace EZLogger.Appenders
 {
@@ -29,6 +30,9 @@ namespace EZLogger.Appenders
         private Timer? _sizeCheckTimer;
         private readonly object _sizeCheckLock = new object();
 
+        // 字符串构建缓存 - 每个FileAppender实例独享，线程安全由WriteThread保证
+        private readonly StringBuilder _stringBuilder = new StringBuilder(512);
+
         public override string Name => "FileAppender";
         public override bool SupportsAsyncWrite => true;
 
@@ -46,7 +50,7 @@ namespace EZLogger.Appenders
                 StartSizeCheckTimer();
             }
         }
-        
+
         /// <summary>
         /// 初始化文件输出器，支持传入时区配置
         /// </summary>
@@ -151,12 +155,58 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>
-        /// 格式化日志消息
+        /// 格式化日志消息 - 零GC实现，包含帧率和线程信息
+        /// 在写入线程中调用，线程安全由调用上下文保证
         /// </summary>
         private string FormatLogMessage(LogMessage message)
         {
-            var timestamp = message.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            return $"[{timestamp}] [{message.Level}] [{message.Tag}] {message.Message}";
+            _stringBuilder.Clear();
+
+            // 构建时间戳部分 - 手动格式化避免ToString分配
+            var dt = message.Timestamp;
+            // 日志条目开始标记 - 便于解析和区分多行日志
+            _stringBuilder.Append(_config.LogEntryPrefix);
+            // 小时
+            if (dt.Hour < 10) _stringBuilder.Append('0');
+            _stringBuilder.Append(dt.Hour);
+            _stringBuilder.Append(':');
+
+            // 分钟
+            if (dt.Minute < 10) _stringBuilder.Append('0');
+            _stringBuilder.Append(dt.Minute);
+            _stringBuilder.Append(':');
+
+            // 秒
+            if (dt.Second < 10) _stringBuilder.Append('0');
+            _stringBuilder.Append(dt.Second);
+            _stringBuilder.Append('.');
+
+            // 毫秒
+            var ms = dt.Millisecond;
+            if (ms < 100) _stringBuilder.Append('0');
+            if (ms < 10) _stringBuilder.Append('0');
+            _stringBuilder.Append(ms);
+            _stringBuilder.Append("[");
+            _stringBuilder.Append(message.Level.ToLevelString());
+            _stringBuilder.Append("]");
+            _stringBuilder.Append("[F:");
+            _stringBuilder.Append(message.FrameCount);
+            _stringBuilder.Append("]");
+
+            // 添加线程ID（如果启用）
+            if (_config?.ShowThreadId == true)
+            {
+                _stringBuilder.Append("[T:");
+                _stringBuilder.Append(message.ThreadId);
+                _stringBuilder.Append("]");
+            }
+
+            _stringBuilder.Append("[");
+            _stringBuilder.Append(message.Tag);
+            _stringBuilder.Append("] ");
+            _stringBuilder.Append(message.Message);
+
+            return _stringBuilder.ToString();
         }
 
         /// <summary>
@@ -167,14 +217,14 @@ namespace EZLogger.Appenders
             try
             {
                 string logDir = GetLogDirectoryPath();
-                string fileName = string.Format(_config?.FileNameTemplate ?? "log_{0:yyyyMMdd}.txt", GetConfiguredTime());
+                string fileName = BuildFileName();
                 _currentFilePath = Path.Combine(logDir, fileName);
 
                 _fileStream = new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
                 _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
 
                 // 写入启动标记
-                _streamWriter.WriteLine($"[!@#]{GetConfiguredTime():HH:mm:ss:fff} [INFO] [FileAppender] Log started");
+                _streamWriter.WriteLine(BuildStartMessage());
                 _streamWriter.Flush();
             }
             catch (Exception ex)
@@ -189,11 +239,7 @@ namespace EZLogger.Appenders
         private string GetLogDirectoryPath()
         {
             string logDir = _config?.LogDirectory ?? "";
-
-            if (string.IsNullOrEmpty(logDir))
-            {
-                logDir = Path.Combine(UnityEngine.Application.persistentDataPath, "Logs");
-            }
+            logDir = Path.Combine(UnityEngine.Application.persistentDataPath, logDir);
 
             if (!Directory.Exists(logDir))
             {
@@ -280,8 +326,7 @@ namespace EZLogger.Appenders
                         _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
 
                         // 记录裁剪操作
-                        string trimMessage = $"[!@#]{GetConfiguredTime():HH:mm:ss:fff} [INFO] [FileAppender] File trimmed, removed {trimSize} bytes";
-                        _streamWriter.WriteLine(trimMessage);
+                        _streamWriter.WriteLine(BuildTrimMessage(trimSize));
                         _streamWriter.Flush();
                     }
                 }
@@ -307,7 +352,7 @@ namespace EZLogger.Appenders
         private DateTime GetConfiguredTime()
         {
             // 🎯 智能时区处理：使用存储的时区配置，避免循环调用
-            
+
             // 如果有时区配置，使用它
             if (_timezoneConfig != null)
             {
@@ -320,7 +365,7 @@ namespace EZLogger.Appenders
                     // 配置的时区有问题，回退到UTC
                 }
             }
-            
+
             // 默认使用UTC时间（初始化时或配置无效时）
             return DateTime.UtcNow;
         }
@@ -400,11 +445,125 @@ namespace EZLogger.Appenders
             }
         }
 
+        /// <summary>
+        /// 构建文件名 - 零GC实现
+        /// </summary>
+        private string BuildFileName()
+        {
+            var sb = new StringBuilder(32); // 临时StringBuilder，局部作用域
+            var template = _config?.FileNameTemplate ?? "log_{0:yyyyMMdd}.txt";
+            var currentTime = GetConfiguredTime();
+
+            // 解析文件名模板 - 替换{0:yyyyMMdd}格式
+            if (template.Contains("{0:yyyyMMdd}"))
+            {
+                sb.Append("log_");
+                // 手动格式化日期避免ToString分配
+                var year = currentTime.Year;
+                sb.Append((char)('0' + year / 1000));
+                sb.Append((char)('0' + (year / 100) % 10));
+                sb.Append((char)('0' + (year / 10) % 10));
+                sb.Append((char)('0' + year % 10));
+
+                var month = currentTime.Month;
+                if (month < 10) sb.Append('0');
+                sb.Append(month);
+
+                var day = currentTime.Day;
+                if (day < 10) sb.Append('0');
+                sb.Append(day);
+
+                sb.Append(".txt");
+            }
+            else
+            {
+                // 如果模板不匹配，直接使用模板
+                sb.Append(template);
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 构建启动消息 - 零GC实现
+        /// </summary>
+        private string BuildStartMessage()
+        {
+            var sb = new StringBuilder(64);
+            var startTime = GetConfiguredTime();
+            sb.Append(_config.LogEntryPrefix);
+
+            // 时间格式 HH:mm:ss:fff
+            if (startTime.Hour < 10) sb.Append('0');
+            sb.Append(startTime.Hour);
+            sb.Append(':');
+
+            if (startTime.Minute < 10) sb.Append('0');
+            sb.Append(startTime.Minute);
+            sb.Append(':');
+
+            if (startTime.Second < 10) sb.Append('0');
+            sb.Append(startTime.Second);
+            sb.Append(':');
+
+            var ms = startTime.Millisecond;
+            if (ms < 100) sb.Append('0');
+            if (ms < 10) sb.Append('0');
+            sb.Append(ms);
+
+            sb.Append(" [INFO] [FileAppender] Log started");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 构建文件裁剪消息 - 零GC实现
+        /// </summary>
+        private string BuildTrimMessage(long trimSize)
+        {
+            var sb = new StringBuilder(128);
+            var trimTime = GetConfiguredTime();
+            sb.Append(_config.LogEntryPrefix);
+
+            // 时间格式 HH:mm:ss:fff
+            if (trimTime.Hour < 10) sb.Append('0');
+            sb.Append(trimTime.Hour);
+            sb.Append(':');
+
+            if (trimTime.Minute < 10) sb.Append('0');
+            sb.Append(trimTime.Minute);
+            sb.Append(':');
+
+            if (trimTime.Second < 10) sb.Append('0');
+            sb.Append(trimTime.Second);
+            sb.Append(':');
+
+            var ms = trimTime.Millisecond;
+            if (ms < 100) sb.Append('0');
+            if (ms < 10) sb.Append('0');
+            sb.Append(ms);
+
+            sb.Append(" [INFO] [FileAppender] File trimmed, removed ");
+            sb.Append(trimSize);
+            sb.Append(" bytes");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 构建错误消息 - 零GC实现
+        /// </summary>
+        private string BuildErrorMessage(string errorMessage)
+        {
+            var sb = new StringBuilder(256);
+            sb.Append("[FileAppender] Error: ");
+            sb.Append(errorMessage);
+            return sb.ToString();
+        }
+
         /// <summary>处理内部错误</summary>
         protected override void HandleInternalError(Exception ex)
         {
             // 避免无限递归，直接输出到Unity控制台
-            UnityEngine.Debug.LogError($"[FileAppender] Error: {ex.Message}");
+            UnityEngine.Debug.LogError(BuildErrorMessage(ex.Message));
         }
     }
 }

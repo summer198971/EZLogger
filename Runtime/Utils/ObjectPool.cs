@@ -15,7 +15,7 @@ namespace EZLogger.Utils
         private readonly Action<T> _resetAction;
         private readonly int _maxSize;
         private int _currentSize;
-        
+
         /// <summary>
         /// 构造函数
         /// </summary>
@@ -28,7 +28,7 @@ namespace EZLogger.Utils
             _resetAction = resetAction;
             _maxSize = maxSize;
         }
-        
+
         /// <summary>
         /// 从池中获取对象
         /// </summary>
@@ -40,30 +40,36 @@ namespace EZLogger.Utils
                 System.Threading.Interlocked.Decrement(ref _currentSize);
                 return item;
             }
-            
+
             return _objectFactory();
         }
-        
+
         /// <summary>
-        /// 将对象返回到池中
+        /// 将对象返回到池中（线程安全）
         /// </summary>
         /// <param name="item">要返回的对象</param>
         public void Return(T item)
         {
             if (item == null)
                 return;
-                
-            // 检查池大小限制
-            if (_currentSize >= _maxSize)
-                return;
-                
+
             // 重置对象状态
             _resetAction?.Invoke(item);
-            
+
+            // 线程安全的大小检查：使用原子操作尝试增加计数
+            int newSize = System.Threading.Interlocked.Increment(ref _currentSize);
+
+            // 如果超过最大大小，回退计数并退出
+            if (newSize > _maxSize)
+            {
+                System.Threading.Interlocked.Decrement(ref _currentSize);
+                return;
+            }
+
+            // 安全地入队
             _objects.Enqueue(item);
-            System.Threading.Interlocked.Increment(ref _currentSize);
         }
-        
+
         /// <summary>
         /// 清空对象池
         /// </summary>
@@ -74,59 +80,14 @@ namespace EZLogger.Utils
                 System.Threading.Interlocked.Decrement(ref _currentSize);
             }
         }
-        
+
         /// <summary>
         /// 当前池中对象数量
         /// </summary>
         public int Count => _currentSize;
     }
-    
-    /// <summary>
-    /// StringBuilder对象池
-    /// </summary>
-    public static class StringBuilderPool
-    {
-        private static readonly ObjectPool<System.Text.StringBuilder> _pool = 
-            new ObjectPool<System.Text.StringBuilder>(
-                () => new System.Text.StringBuilder(256),
-                sb => sb.Clear(),
-                50
-            );
-        
-        /// <summary>
-        /// 获取StringBuilder实例
-        /// </summary>
-        public static System.Text.StringBuilder Get()
-        {
-            return _pool.Get();
-        }
-        
-        /// <summary>
-        /// 返回StringBuilder实例
-        /// </summary>
-        public static void Return(System.Text.StringBuilder sb)
-        {
-            if (sb != null && sb.Capacity <= 4096) // 避免缓存过大的StringBuilder
-            {
-                _pool.Return(sb);
-            }
-        }
-        
-        /// <summary>
-        /// 使用StringBuilder并自动返回池中
-        /// </summary>
-        public static string Build(System.Action<System.Text.StringBuilder> buildAction)
-        {
-            var sb = Get();
-            try
-            {
-                buildAction(sb);
-                return sb.ToString();
-            }
-            finally
-            {
-                Return(sb);
-            }
-        }
-    }
+
+    // 注意: StringBuilderPool 已被移除
+    // 每个 Appender 类现在独立管理自己的 StringBuilder 实例
+    // 这样避免了线程安全的复杂性，架构更清晰
 }

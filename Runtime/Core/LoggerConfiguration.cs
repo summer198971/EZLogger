@@ -185,6 +185,12 @@ namespace EZLogger
 
         /// <summary>是否启用文件压缩</summary>
         public bool EnableCompression = false;
+
+        /// <summary>是否显示线程ID</summary>
+        public bool ShowThreadId = false;
+
+        /// <summary>日志条目开始标记（便于解析和区分多行日志）</summary>
+        public string LogEntryPrefix = "[!@#]";
     }
 
     /// <summary>
@@ -232,9 +238,6 @@ namespace EZLogger
 
         /// <summary>是否启用颜色</summary>
         public bool EnableColors = true;
-
-        /// <summary>是否显示帧数</summary>
-        public bool ShowFrameCount = true;
 
         /// <summary>是否显示线程ID</summary>
         public bool ShowThreadId = false;
