@@ -149,7 +149,8 @@ namespace EZLogger
             // 标记正在初始化，防止递归调用
             _isInitializing = true;
 
-            _configuration = LoggerConfiguration.CreateDefault();
+            // 从运行时配置加载器加载配置
+            _configuration = RuntimeSettingsLoader.LoadConfiguration();
             _logQueue = new ThreadSafeQueue<LogMessage>(_configuration.MaxQueueSize);
 
             // 启动写入线程
@@ -370,13 +371,102 @@ namespace EZLogger
             }
         }
 
+        /// <summary>
+        /// 日志级别到Logger类型的映射配置
+        /// 便于扩展和维护不同级别的特殊处理逻辑
+        /// </summary>
+        private static readonly Dictionary<LogLevel, System.Func<LogLevel, ILogger, ConditionalLogger>> LoggerTypeMapping =
+            new Dictionary<LogLevel, System.Func<LogLevel, ILogger, ConditionalLogger>>
+            {
+                // 基础级别使用ConditionalLogger
+                { LogLevel.Log, (level, logger) => new ConditionalLogger(level, logger) },
+                { LogLevel.Warning, (level, logger) => new ConditionalLogger(level, logger) },
+                { LogLevel.Assert, (level, logger) => new ConditionalLogger(level, logger) },
+                
+                // 关键级别使用CriticalConditionalLogger（包含防重复和服务器上报）
+                { LogLevel.Error, (level, logger) => new CriticalConditionalLogger(level, logger) },
+                { LogLevel.Exception, (level, logger) => new CriticalConditionalLogger(level, logger) },
+                
+                // 可以在这里轻松添加新的特殊Logger类型
+                // 例如：{ LogLevel.Performance, (level, logger) => new PerformanceConditionalLogger(level, logger) },
+            };
+
+        /// <summary>
+        /// 注册自定义的Logger类型工厂方法
+        /// 允许在运行时为特定级别注册特殊的Logger实现
+        /// </summary>
+        /// <param name="level">日志级别</param>
+        /// <param name="factory">Logger工厂方法</param>
+        /// <example>
+        /// // 注册一个性能专用的Logger
+        /// EZLoggerManager.RegisterLoggerType(LogLevel.Log, 
+        ///     (level, logger) => new PerformanceConditionalLogger(level, logger));
+        /// </example>
+        public static void RegisterLoggerType(LogLevel level, System.Func<LogLevel, ILogger, ConditionalLogger> factory)
+        {
+            if (factory == null)
+                throw new System.ArgumentNullException(nameof(factory));
+
+            lock (_instanceLock)
+            {
+                LoggerTypeMapping[level] = factory;
+
+                // 如果实例已经创建，需要重新初始化该级别的Logger
+                if (_instance != null)
+                {
+                    _instance.ReinitializeLogger(level);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取指定级别当前使用的Logger类型名称
+        /// </summary>
+        /// <param name="level">日志级别</param>
+        /// <returns>Logger类型名称</returns>
+        public static string GetLoggerTypeName(LogLevel level)
+        {
+            if (LoggerTypeMapping.TryGetValue(level, out var factory))
+            {
+                // 创建一个临时实例来获取类型信息
+                var tempLogger = factory(level, null);
+                return tempLogger?.GetType().Name ?? "Unknown";
+            }
+            return "ConditionalLogger"; // 默认类型
+        }
+
+        /// <summary>
+        /// 重新初始化指定级别的Logger（用于运行时类型变更）
+        /// </summary>
+        private void ReinitializeLogger(LogLevel level)
+        {
+            if (LoggerTypeMapping.TryGetValue(level, out var factory))
+            {
+                _conditionalLoggers[level] = factory(level, this);
+            }
+            else
+            {
+                _conditionalLoggers[level] = new ConditionalLogger(level, this);
+            }
+        }
+
         private void InitializeConditionalLoggers()
         {
-            // 为每个日志级别创建条件日志记录器
+            // 使用映射配置创建条件日志记录器
             foreach (LogLevel level in Enum.GetValues(typeof(LogLevel)))
             {
-                if (level != LogLevel.None && level != LogLevel.All && level != LogLevel.ErrorAndWarning)
+                // 跳过复合级别和无效级别
+                if (level == LogLevel.None || level == LogLevel.All || level == LogLevel.ErrorAndWarning)
+                    continue;
+
+                // 从映射中获取对应的工厂方法
+                if (LoggerTypeMapping.TryGetValue(level, out var factory))
                 {
+                    _conditionalLoggers[level] = factory(level, this);
+                }
+                else
+                {
+                    // 如果没有特殊配置，使用默认的ConditionalLogger
                     _conditionalLoggers[level] = new ConditionalLogger(level, this);
                 }
             }
@@ -573,57 +663,8 @@ namespace EZLogger
             Log(logMessage);
         }
 
-        #region 便捷日志方法
-        public void LogLog(string tag, string message) => Log(LogLevel.Log, tag, message);
-        public void LogWarning(string tag, string message) => Log(LogLevel.Warning, tag, message);
-        public void LogAssert(string tag, string message) => Log(LogLevel.Assert, tag, message);
-
-        /// <summary>
-        /// 记录错误日志（带防重复机制和服务器上报）
-        /// </summary>
-        public void LogError(string tag, string message)
-        {
-            // 设置防重复标志，避免调用Unity Debug.LogError时重复记录
-            SystemLogMonitor.Instance.SetPreventDuplicate(LogLevel.Error, true);
-            try
-            {
-                Log(LogLevel.Error, tag, message);
-
-                // 如果启用服务器上报，则上报自己API的错误
-                if (_serverReportingEnabled)
-                {
-                    ReportToServer(message, LogLevel.Error, tag);
-                }
-            }
-            finally
-            {
-                SystemLogMonitor.Instance.SetPreventDuplicate(LogLevel.Error, false);
-            }
-        }
-
-        /// <summary>
-        /// 记录异常日志（带防重复机制和服务器上报）
-        /// </summary>
-        public void LogException(string tag, string message)
-        {
-            // 设置防重复标志，避免调用Unity Debug.LogException时重复记录
-            SystemLogMonitor.Instance.SetPreventDuplicate(LogLevel.Exception, true);
-            try
-            {
-                Log(LogLevel.Exception, tag, message);
-
-                // 如果启用服务器上报，则上报自己API的异常
-                if (_serverReportingEnabled)
-                {
-                    ReportToServer(message, LogLevel.Exception, tag);
-                }
-            }
-            finally
-            {
-                SystemLogMonitor.Instance.SetPreventDuplicate(LogLevel.Exception, false);
-            }
-        }
-        #endregion
+        // 注意：传统便捷方法已移除，专注于零开销设计
+        // 推荐使用：EZLog.Error?.Log("tag", "message") 等零开销API
         #endregion
 
         #region 写入线程处理
@@ -1025,6 +1066,8 @@ namespace EZLogger
         {
             RefreshAppenders();
         }
+
+
         #endregion
 
         #region 刷新和释放
@@ -1249,31 +1292,18 @@ namespace EZLogger
         }
         #endregion
 
-        #region 传统便捷方法（保持向下兼容）
-        // 新的方法，与Unity LogType对齐
-        public static void LogLog(string tag, string message) => Logger.LogLog(tag, message);
-        public static void LogWarning(string tag, string message) => Logger.LogWarning(tag, message);
-        public static void LogAssert(string tag, string message) => Logger.LogAssert(tag, message);
-        public static void LogError(string tag, string message) => Logger.LogError(tag, message);
-        public static void LogException(string tag, string message) => Logger.LogException(tag, message);
-
-        // 使用对象作为标签
-        public static void LogLog(object tag, string message) => Logger.LogLog(tag?.ToString(), message);
-        public static void LogWarning(object tag, string message) => Logger.LogWarning(tag?.ToString(), message);
-        public static void LogAssert(object tag, string message) => Logger.LogAssert(tag?.ToString(), message);
-        public static void LogError(object tag, string message) => Logger.LogError(tag?.ToString(), message);
-        public static void LogException(object tag, string message) => Logger.LogException(tag?.ToString(), message);
-
-        // 格式化方法
-        public static void LogLogFormat(string tag, string format, params object[] args) => Logger.LogLogFormat(tag, format, args);
-        public static void LogWarningFormat(string tag, string format, params object[] args) => Logger.LogWarningFormat(tag, format, args);
-        public static void LogAssertFormat(string tag, string format, params object[] args) => Logger.LogAssertFormat(tag, format, args);
-        public static void LogErrorFormat(string tag, string format, params object[] args) => Logger.LogErrorFormat(tag, format, args);
-        public static void LogExceptionFormat(string tag, string format, params object[] args) => Logger.LogExceptionFormat(tag, format, args);
-
-        // 异常记录
-        public static void LogException(string tag, System.Exception ex) => Logger.LogException(tag, ex);
-        #endregion
+        // 注意：传统便捷方法已移除，框架专注于零开销设计
+        // 
+        // 推荐使用模式：
+        // ✅ EZLog.Log?.Log("tag", "message")      - 零开销，对应Unity LogType.Log
+        // ✅ EZLog.Warning?.Log("tag", "message")  - 零开销，对应Unity LogType.Warning  
+        // ✅ EZLog.Error?.Log("tag", "message")    - 零开销，对应Unity LogType.Error
+        // ✅ EZLog.Exception?.Log("tag", "message") - 零开销，对应Unity LogType.Exception
+        // 
+        // 这样设计的好处：
+        // 1. 禁用级别时连参数都不会计算
+        // 2. 代码更简洁，维护成本更低
+        // 3. 完全与Unity LogType对齐
 
         #region 静态级别控制方法
         /// <summary>启用指定级别</summary>
@@ -1331,6 +1361,36 @@ namespace EZLogger
 
         /// <summary>手动刷新输出器配置</summary>
         public static void RefreshConfiguration() => EZLoggerManager.Instance.RefreshConfiguration();
+
+        #region Logger类型管理
+        /// <summary>注册自定义Logger类型</summary>
+        /// <param name="level">日志级别</param>
+        /// <param name="factory">Logger工厂方法</param>
+        public static void RegisterLoggerType(LogLevel level, System.Func<LogLevel, ILogger, ConditionalLogger> factory)
+            => EZLoggerManager.RegisterLoggerType(level, factory);
+
+        /// <summary>获取指定级别的Logger类型名称</summary>
+        /// <param name="level">日志级别</param>
+        /// <returns>Logger类型名称</returns>
+        public static string GetLoggerTypeName(LogLevel level) => EZLoggerManager.GetLoggerTypeName(level);
+
+        /// <summary>
+        /// 获取所有级别的Logger类型映射信息
+        /// </summary>
+        /// <returns>级别到Logger类型的映射字典</returns>
+        public static Dictionary<LogLevel, string> GetAllLoggerTypes()
+        {
+            var result = new Dictionary<LogLevel, string>();
+            foreach (LogLevel level in System.Enum.GetValues(typeof(LogLevel)))
+            {
+                if (level != LogLevel.None && level != LogLevel.All && level != LogLevel.ErrorAndWarning)
+                {
+                    result[level] = GetLoggerTypeName(level);
+                }
+            }
+            return result;
+        }
+        #endregion
         #endregion
     }
 }

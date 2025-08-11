@@ -5,13 +5,13 @@ using System.Runtime.CompilerServices;
 namespace EZLogger
 {
     /// <summary>
-    /// 条件日志记录器 - 实现真正的零开销
+    /// 条件日志记录器基类 - 实现真正的零开销
     /// 当级别被禁用时，返回null，避免任何性能开销
     /// </summary>
     public class ConditionalLogger
     {
-        private readonly LogLevel _level;
-        private readonly ILogger _logger;
+        protected readonly LogLevel _level;
+        protected readonly ILogger _logger;
 
         internal ConditionalLogger(LogLevel level, ILogger logger)
         {
@@ -21,45 +21,22 @@ namespace EZLogger
 
         /// <summary>
         /// 记录日志 - 只有在级别启用时才会有实际开销
+        /// 可以被子类重写以实现特殊处理逻辑
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Log(string tag, string message)
+        public virtual void Log(string tag, string message)
         {
-            // 对Error和Exception级别应用防重复机制
-            if (_level == LogLevel.Error || _level == LogLevel.Exception)
-            {
-                LogWithPreventDuplicate(tag, message);
-            }
-            else
-            {
-                // 其他级别直接记录
-                _logger.Log(_level, tag, message);
-            }
+            // 基础实现：直接记录日志
+            _logger.Log(_level, tag, message);
         }
 
         /// <summary>
-        /// 带防重复机制的日志记录（包含服务器上报）
+        /// 记录日志消息对象 - 可以被子类重写
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void LogWithPreventDuplicate(string tag, string message)
+        public virtual void Log(LogMessage logMessage)
         {
-            // 设置防重复标志，避免调用Unity Debug时重复记录
-            SystemLogMonitor.Instance.SetPreventDuplicate(_level, true);
-            try
-            {
-                // 通过正常的日志管道输出，由UnityAppender负责Unity控制台输出
-                _logger.Log(_level, tag, message);
-
-                // 如果是EZLoggerManager实例，且启用服务器上报，则上报零开销API的错误
-                if (_logger is EZLoggerManager manager && manager.IsServerReportingEnabled)
-                {
-                    manager.ReportToServer(message, _level, tag);
-                }
-            }
-            finally
-            {
-                SystemLogMonitor.Instance.SetPreventDuplicate(_level, false);
-            }
+            _logger.Log(logMessage);
         }
 
         /// <summary>
@@ -68,11 +45,20 @@ namespace EZLogger
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Log(object tag, string message)
         {
-            Log(tag?.ToString() ?? "NULL", message);
+            if (tag == null)
+            {
+                Log("NULL", message);
+            }
+            else
+            {
+                Log(tag.GetType().Name, message);
+            }
         }
 
         /// <summary>
-        /// 格式化日志 - 零开销版本
+        /// 格式化日志 - 保留兼容性，但推荐使用字符串插值
+        /// 推荐：EZLog.Log?.Log("tag", $"Value: {value}") 
+        /// 而非：EZLog.Log?.LogFormat("tag", "Value: {0}", value)
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LogFormat(string tag, string format, params object[] args)
@@ -80,7 +66,7 @@ namespace EZLogger
             try
             {
                 string message = string.Format(format, args);
-                Log(tag, message); // 使用统一的Log方法，确保防重复机制生效
+                Log(tag, message); // 使用统一的Log方法，确保子类处理逻辑生效
             }
             catch (FormatException)
             {
@@ -97,23 +83,8 @@ namespace EZLogger
             var logMessage = new LogMessage(_level, tag, message,
                 FormatStackTrace(stackTrace), GetCurrentFrameCount());
 
-            // 对Error和Exception级别应用防重复机制
-            if (_level == LogLevel.Error || _level == LogLevel.Exception)
-            {
-                SystemLogMonitor.Instance.SetPreventDuplicate(_level, true);
-                try
-                {
-                    _logger.Log(logMessage);
-                }
-                finally
-                {
-                    SystemLogMonitor.Instance.SetPreventDuplicate(_level, false);
-                }
-            }
-            else
-            {
-                _logger.Log(logMessage);
-            }
+            // 使用虚方法，让子类决定如何处理
+            Log(logMessage);
         }
 
         private string FormatStackTrace(StackTrace stackTrace)
@@ -186,6 +157,81 @@ namespace EZLogger
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [Conditional("NEVER_DEFINED")]
         public void Log(string tag, string message, StackTrace stackTrace) { }
+    }
+
+    /// <summary>
+    /// 专用于Error和Exception级别的条件日志记录器
+    /// 实现防重复机制和服务器上报功能
+    /// </summary>
+    internal sealed class CriticalConditionalLogger : ConditionalLogger
+    {
+        internal CriticalConditionalLogger(LogLevel level, ILogger logger) : base(level, logger)
+        {
+        }
+
+        /// <summary>
+        /// 重写Log方法，添加防重复机制和服务器上报
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public override void Log(string tag, string message)
+        {
+            LogWithCriticalHandling(tag, message);
+        }
+
+        /// <summary>
+        /// 重写LogMessage方法，处理带堆栈跟踪的日志
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public override void Log(LogMessage logMessage)
+        {
+            ExecuteWithPreventDuplicate(() => _logger.Log(logMessage));
+        }
+
+        /// <summary>
+        /// 带防重复机制和服务器上报的关键日志记录
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void LogWithCriticalHandling(string tag, string message)
+        {
+            ExecuteWithPreventDuplicate(() =>
+            {
+                // 通过正常的日志管道输出，由UnityAppender负责Unity控制台输出
+                _logger.Log(_level, tag, message);
+
+                // 服务器上报（如果启用）
+                ReportToServerIfEnabled(message, tag);
+            });
+        }
+
+        /// <summary>
+        /// 执行带防重复标志的操作
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ExecuteWithPreventDuplicate(System.Action action)
+        {
+            // 设置防重复标志，避免调用Unity Debug时重复记录
+            SystemLogMonitor.Instance.SetPreventDuplicate(_level, true);
+            try
+            {
+                action();
+            }
+            finally
+            {
+                SystemLogMonitor.Instance.SetPreventDuplicate(_level, false);
+            }
+        }
+
+        /// <summary>
+        /// 如果启用服务器上报，则上报错误到服务器
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ReportToServerIfEnabled(string message, string tag)
+        {
+            if (_logger is EZLoggerManager manager && manager.IsServerReportingEnabled)
+            {
+                manager.ReportToServer(message, _level, tag);
+            }
+        }
     }
 }
 
