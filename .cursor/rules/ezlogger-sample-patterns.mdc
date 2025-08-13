@@ -300,14 +300,11 @@ void DemonstrateRuntimeConfiguration()
     var config = EZLoggerManager.Instance.Configuration;
     
     EZLog.Log?.Log("Config", "=== 运行时配置演示 ===");
-    EZLog.Log?.LogFormat("Config", "性能模式: {0}", config.PerformanceMode);
-    EZLog.Log?.LogFormat("Config", "异步写入: {0}", config.EnableAsyncWrite);
     EZLog.Log?.LogFormat("Config", "堆栈跟踪: {0}", config.EnableStackTrace);
     
     // 临时修改配置
     var originalMode = config.PerformanceMode;
     config.PerformanceMode = !originalMode;
-    EZLog.Log?.LogFormat("Config", "性能模式已切换为: {0}", config.PerformanceMode);
     
     // 恢复配置
     config.PerformanceMode = originalMode;

@@ -53,9 +53,9 @@
       "path": "Samples~/Advanced Configuration"
     },
     {
-      "displayName": "Custom Appenders",
-      "description": "Examples of creating custom log appenders",
-      "path": "Samples~/Custom Appenders"
+      "displayName": "Runtime Tester Demo",
+      "description": "Examples of runtime tester demo",
+      "path": "Samples~/Runtime Tester Demo"
     }
   ]
 }

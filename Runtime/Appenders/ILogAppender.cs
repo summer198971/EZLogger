@@ -20,10 +20,12 @@ namespace EZLogger.Appenders
         bool SupportsAsyncWrite { get; }
 
         /// <summary>
-        /// 写入日志消息
+        /// 写入日志消息（输出器自决定同步/异步）
         /// </summary>
         /// <param name="message">日志消息</param>
         void WriteLog(LogMessage message);
+
+
 
         /// <summary>
         /// 刷新缓冲区
@@ -61,7 +63,7 @@ namespace EZLogger.Appenders
         protected bool IsDisposed { get; private set; }
 
         /// <summary>
-        /// 写入日志消息
+        /// 写入日志消息（输出器自决定同步/异步）
         /// </summary>
         public void WriteLog(LogMessage message)
         {
@@ -83,6 +85,10 @@ namespace EZLogger.Appenders
                 HandleInternalError(ex);
             }
         }
+
+
+
+
 
         /// <summary>
         /// 刷新缓冲区

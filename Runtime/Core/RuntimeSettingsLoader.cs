@@ -117,7 +117,6 @@ namespace EZLogger
                 GlobalEnabledLevels = LogLevel.WarningAndAbove, // 只保留警告和错误
                 PerformanceMode = true,
                 EnableStackTrace = false,
-                EnableAsyncWrite = true,
                 UnityConsole = new UnityConsoleConfig
                 {
                     Enabled = true,
@@ -197,7 +196,6 @@ namespace EZLogger
         public bool enableStackTrace = true;
         public LogLevel stackTraceMinLevel = LogLevel.Warning;
         public int maxStackTraceDepth = 10;
-        public bool enableAsyncWrite = true;
         public int maxQueueSize = 1000;
         public int bufferSize = 4096;
 
@@ -246,11 +244,9 @@ namespace EZLogger
             var config = new LoggerConfiguration
             {
                 GlobalEnabledLevels = globalEnabledLevels,
-                PerformanceMode = performanceMode,
                 EnableStackTrace = enableStackTrace,
                 StackTraceMinLevel = stackTraceMinLevel,
                 MaxStackTraceDepth = maxStackTraceDepth,
-                EnableAsyncWrite = enableAsyncWrite,
                 MaxQueueSize = maxQueueSize,
                 BufferSize = bufferSize
             };
@@ -306,11 +302,9 @@ namespace EZLogger
             var serializable = new SerializableLoggerConfiguration
             {
                 globalEnabledLevels = config.GlobalEnabledLevels,
-                performanceMode = config.PerformanceMode,
                 enableStackTrace = config.EnableStackTrace,
                 stackTraceMinLevel = config.StackTraceMinLevel,
                 maxStackTraceDepth = config.MaxStackTraceDepth,
-                enableAsyncWrite = config.EnableAsyncWrite,
                 maxQueueSize = config.MaxQueueSize,
                 bufferSize = config.BufferSize
             };

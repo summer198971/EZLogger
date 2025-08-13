@@ -23,7 +23,6 @@ namespace EZLogger.Tests
             // 1. 测试配置来源
             Debug.Log("[InitializationOrderTest] 测试配置加载源...");
             var loadedConfig = RuntimeSettingsLoader.LoadConfiguration();
-            Debug.Log($"[InitializationOrderTest] 运行时配置加载完成 - 性能模式: {loadedConfig.PerformanceMode}");
 
             // 2. 测试EZLoggerManager是否使用了正确的配置
             var manager = EZLoggerManager.Instance;
@@ -31,7 +30,6 @@ namespace EZLogger.Tests
 
             // 3. 测试配置一致性
             var currentConfig = manager.Configuration;
-            Debug.Log($"[InitializationOrderTest] Manager配置 - 性能模式: {currentConfig.PerformanceMode}, 异步写入: {currentConfig.EnableAsyncWrite}");
             Debug.Log($"[InitializationOrderTest] 配置源路径检查完成");
 
             // 4. 测试构建类型相关的默认配置

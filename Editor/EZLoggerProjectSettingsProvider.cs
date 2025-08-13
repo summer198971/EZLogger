@@ -131,10 +131,8 @@ namespace EZLogger.Editor
                     ApplyReleasePreset();
                 }
 
-                if (GUILayout.Button("性能模式", GUILayout.Width(100)))
-                {
-                    ApplyPerformancePreset();
-                }
+
+
 
                 GUILayout.FlexibleSpace();
 
@@ -149,7 +147,6 @@ namespace EZLogger.Editor
         private void DrawBasicSettings()
         {
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("globalEnabledLevels"), new GUIContent("全局启用级别"));
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("performanceMode"), new GUIContent("性能模式"));
 
             // 堆栈跟踪相关 - 未实现
             EditorGUILayout.Space(3);
@@ -170,20 +167,13 @@ namespace EZLogger.Editor
 
         private void DrawAsyncSettings()
         {
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableAsyncWrite"), new GUIContent("启用异步写入"));
+            EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxQueueSize"), new GUIContent("队列最大大小"));
 
-            if (settings.enableAsyncWrite)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxQueueSize"), new GUIContent("队列最大大小"));
-
-                // BufferSize - 未实现
-                var oldEnabled = GUI.enabled;
-                GUI.enabled = false;
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("bufferSize"), new GUIContent("缓冲区大小 (未实现)"));
-                GUI.enabled = oldEnabled;
-                EditorGUI.indentLevel--;
-            }
+            // BufferSize - 未实现
+            var oldEnabled = GUI.enabled;
+            GUI.enabled = false;
+            EditorGUILayout.PropertyField(serializedSettings.FindProperty("bufferSize"), new GUIContent("缓冲区大小 (未实现)"));
+            GUI.enabled = oldEnabled;
         }
 
         private void DrawUnityConsoleSettings()
@@ -365,11 +355,11 @@ namespace EZLogger.Editor
             serializedSettings.Update();
         }
 
+
+
         private void ApplyPerformancePreset()
         {
             var config = LoggerConfiguration.CreateRelease();
-            config.PerformanceMode = true;
-            config.EnableAsyncWrite = true;
             config.FileOutput.Enabled = false;
             settings.FromLoggerConfiguration(config);
             settings.enableSystemLogMonitor = false;

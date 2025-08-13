@@ -14,9 +14,6 @@ namespace EZLogger.Editor
         [Tooltip("全局启用的日志级别")]
         public LogLevel globalEnabledLevels = LogLevel.All;
 
-        [Tooltip("性能模式（零GC分配）")]
-        public bool performanceMode = false;
-
         [Tooltip("启用堆栈跟踪")]
         public bool enableStackTrace = true;
 
@@ -27,10 +24,9 @@ namespace EZLogger.Editor
         [Range(1, 50)]
         public int maxStackTraceDepth = 10;
 
-        [Header("异步处理")]
-        [Tooltip("启用异步写入")]
-        public bool enableAsyncWrite = true;
 
+
+        //[Header("异步处理")]
         [Tooltip("日志队列最大大小")]
         [Range(100, 10000)]
         public int maxQueueSize = 1000;
@@ -139,11 +135,9 @@ namespace EZLogger.Editor
             var config = new LoggerConfiguration
             {
                 GlobalEnabledLevels = globalEnabledLevels,
-                PerformanceMode = performanceMode,
                 EnableStackTrace = enableStackTrace,
                 StackTraceMinLevel = stackTraceMinLevel,
                 MaxStackTraceDepth = maxStackTraceDepth,
-                EnableAsyncWrite = enableAsyncWrite,
                 MaxQueueSize = maxQueueSize,
                 BufferSize = bufferSize
             };
@@ -197,11 +191,9 @@ namespace EZLogger.Editor
         public void FromLoggerConfiguration(LoggerConfiguration config)
         {
             globalEnabledLevels = config.GlobalEnabledLevels;
-            performanceMode = config.PerformanceMode;
             enableStackTrace = config.EnableStackTrace;
             stackTraceMinLevel = config.StackTraceMinLevel;
             maxStackTraceDepth = config.MaxStackTraceDepth;
-            enableAsyncWrite = config.EnableAsyncWrite;
             maxQueueSize = config.MaxQueueSize;
             bufferSize = config.BufferSize;
 

@@ -129,14 +129,6 @@ catch (Exception ex)
     EZLog.SetErrorAndAbove();
 #endif
 
-// ✅ 运行时根据场景调整
-void OnPerformanceMode(bool enabled)
-{
-    if (enabled)
-        EZLog.SetErrorAndAbove();  // 性能模式只记录错误
-    else
-        EZLog.EnableAll();         // 调试模式记录所有
-}
 ```
 
 ## 迁移指南

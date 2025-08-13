@@ -61,7 +61,7 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>
-        /// 核心写入逻辑
+        /// 核心写入逻辑（放入队列，异步处理）
         /// </summary>
         protected override void WriteLogCore(LogMessage message)
         {
@@ -73,6 +73,8 @@ namespace EZLogger.Appenders
                 _messageQueue.Enqueue(message);
             }
         }
+
+
 
         /// <summary>
         /// 启动写入线程
@@ -511,7 +513,7 @@ namespace EZLogger.Appenders
             if (ms < 10) sb.Append('0');
             sb.Append(ms);
 
-            sb.Append(" [INFO] [FileAppender] Log started");
+            sb.Append(" [Log] [FileAppender] Log started");
             return sb.ToString();
         }
 

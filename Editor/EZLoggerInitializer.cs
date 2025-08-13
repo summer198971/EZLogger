@@ -109,6 +109,8 @@ namespace EZLogger.Editor
                 $"默认设置已创建: {EZLoggerSettings.GetSettingsPath()}", "确定");
         }
 
+
+
         /// <summary>
         /// 菜单项：运行时测试
         /// </summary>

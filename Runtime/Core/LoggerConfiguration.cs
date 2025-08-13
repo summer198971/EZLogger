@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
 
 namespace EZLogger
 {
@@ -83,9 +85,6 @@ namespace EZLogger
         /// <summary>全局启用的日志级别</summary>
         public LogLevel GlobalEnabledLevels = LogLevel.All;
 
-        /// <summary>是否启用性能模式（零GC分配）</summary>
-        public bool PerformanceMode = false;
-
         /// <summary>是否启用堆栈跟踪</summary>
         public bool EnableStackTrace = true;
 
@@ -95,8 +94,7 @@ namespace EZLogger
         /// <summary>最大堆栈跟踪深度</summary>
         public int MaxStackTraceDepth = 10;
 
-        /// <summary>是否启用异步写入</summary>
-        public bool EnableAsyncWrite = true;
+
 
         /// <summary>日志队列最大大小</summary>
         public int MaxQueueSize = 1000;
@@ -119,6 +117,11 @@ namespace EZLogger
         /// <summary>时区配置</summary>
         public TimezoneConfig Timezone = new TimezoneConfig();
 
+        public string GetLogFolderPath()
+        {
+            return $"{Application.persistentDataPath}/{FileOutput.LogDirectory}/";
+        }
+
         /// <summary>
         /// 创建默认配置
         /// </summary>
@@ -135,9 +138,7 @@ namespace EZLogger
             return new LoggerConfiguration
             {
                 GlobalEnabledLevels = LogLevel.ErrorAndWarning,
-                PerformanceMode = true,
-                EnableStackTrace = false,
-                EnableAsyncWrite = true
+                EnableStackTrace = false
             };
         }
 
@@ -149,10 +150,14 @@ namespace EZLogger
             return new LoggerConfiguration
             {
                 GlobalEnabledLevels = LogLevel.All,
-                PerformanceMode = false,
-                EnableStackTrace = true,
-                EnableAsyncWrite = true
+                EnableStackTrace = true
             };
+        }
+
+
+        public static string GetLogFilePath(FileOutputConfig fileOutput)
+        {
+            return Path.Combine(Application.persistentDataPath + fileOutput.LogDirectory, "EZLogger.log");
         }
     }
 

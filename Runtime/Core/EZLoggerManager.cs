@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using EZLogger.Appenders;
 using EZLogger.Utils;
+using UnityEngine;
 
 namespace EZLogger
 {
@@ -45,9 +46,6 @@ namespace EZLogger
         #region 字段和属性
         private readonly List<ILogAppender> _appenders = new List<ILogAppender>();
         private readonly object _appendersLock = new object();
-        private readonly ThreadSafeQueue<LogMessage> _logQueue;
-        private readonly Thread _writeThread;
-        private volatile bool _isRunning;
         private volatile bool _isDisposed;
         private volatile bool _isInitializing;
 
@@ -139,8 +137,6 @@ namespace EZLogger
         public void DisableAll() => EnabledLevels = LogLevel.None;
         #endregion
 
-        /// <summary>是否处于性能模式</summary>
-        public bool IsPerformanceMode => _configuration?.PerformanceMode ?? false;
         #endregion
 
         #region 构造函数和初始化
@@ -151,19 +147,6 @@ namespace EZLogger
 
             // 从运行时配置加载器加载配置
             _configuration = RuntimeSettingsLoader.LoadConfiguration();
-            _logQueue = new ThreadSafeQueue<LogMessage>(_configuration.MaxQueueSize);
-
-            // 启动写入线程
-            if (_configuration.EnableAsyncWrite)
-            {
-                _isRunning = true;
-                _writeThread = new Thread(WriteThreadProc)
-                {
-                    Name = "EZLogger-Writer",
-                    IsBackground = true
-                };
-                _writeThread.Start();
-            }
 
             // 初始化条件日志记录器
             InitializeConditionalLoggers();
@@ -617,38 +600,24 @@ namespace EZLogger
             if (!IsEnabled || _isDisposed)
                 return false;
 
-            // 性能模式下，如果级别未启用则直接返回false
-            if (IsPerformanceMode && !EnabledLevels.Contains(level))
+            // 如果级别未启用则直接返回false
+            if (!EnabledLevels.Contains(level))
                 return false;
 
             return EnabledLevels.Contains(level);
         }
 
         /// <summary>
-        /// 记录日志消息
+        /// 记录日志消息 - 优化后的简化设计
+        /// 直接分发给所有输出器，让它们自己决定同步/异步处理
         /// </summary>
         public void Log(LogMessage message)
         {
             if (!IsLevelEnabled(message.Level))
                 return;
 
-            // 分别处理同步和异步输出器
-            WriteToSyncAppenders(message);
-
-            if (_configuration.EnableAsyncWrite && _isRunning)
-            {
-                // 异步写入到支持异步的输出器
-                if (!_logQueue.Enqueue(message))
-                {
-                    // 队列已满，强制入队（会丢弃最旧的消息）
-                    _logQueue.ForceEnqueue(message);
-                }
-            }
-            else
-            {
-                // 同步写入到支持异步的输出器
-                WriteToAsyncAppenders(message);
-            }
+            // 直接写入所有输出器，让它们自己管理异步
+            WriteToAllAppenders(message);
         }
 
         /// <summary>
@@ -667,54 +636,20 @@ namespace EZLogger
         // 推荐使用：EZLog.Error?.Log("tag", "message") 等零开销API
         #endregion
 
-        #region 写入线程处理
-        private void WriteThreadProc()
-        {
-            while (_isRunning)
-            {
-                try
-                {
-                    // 批量处理日志消息
-                    var messages = _logQueue.DequeueBatch(10);
-                    if (messages.Count > 0)
-                    {
-                        foreach (var message in messages)
-                        {
-                            WriteToAppenders(message);
-                        }
-                    }
-                    else
-                    {
-                        // 没有消息时短暂休眠
-                        Thread.Sleep(10);
-                    }
-                }
-                catch (ThreadAbortException)
-                {
-                    // 线程被主动终止（通常发生在Unity编辑器停止播放模式时）
-                    // 这是正常行为，不需要记录错误
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    // 其他异常才需要记录
-                    HandleInternalError(ex);
-                }
-            }
-        }
+        #region 输出器写入处理 - 优化后的简化设计
 
         /// <summary>
-        /// 写入到同步输出器（如Unity控制台）
-        /// 这些输出器需要立即执行，以保证与Unity原生API的顺序一致
+        /// 写入到所有输出器 - 优化后的统一入口
+        /// 每个输出器自己决定是否异步处理
         /// </summary>
-        private void WriteToSyncAppenders(LogMessage message)
+        private void WriteToAllAppenders(LogMessage message)
         {
             ILogAppender[] appenders;
             lock (_appendersLock)
             {
                 if (_appenders.Count == 0)
                     return;
-                appenders = _appenders.Where(a => !a.SupportsAsyncWrite).ToArray();
+                appenders = _appenders.ToArray();
             }
 
             foreach (var appender in appenders)
@@ -723,6 +658,7 @@ namespace EZLogger
                 {
                     if (appender.IsEnabled && appender.SupportedLevels.Contains(message.Level))
                     {
+                        // 让输出器自己决定同步/异步处理
                         appender.WriteLog(message);
                     }
                 }
@@ -731,45 +667,6 @@ namespace EZLogger
                     HandleInternalError(ex);
                 }
             }
-        }
-
-        /// <summary>
-        /// 写入到异步输出器（如文件）
-        /// 这些输出器可以在后台线程处理，避免IO阻塞
-        /// </summary>
-        private void WriteToAsyncAppenders(LogMessage message)
-        {
-            ILogAppender[] appenders;
-            lock (_appendersLock)
-            {
-                if (_appenders.Count == 0)
-                    return;
-                appenders = _appenders.Where(a => a.SupportsAsyncWrite).ToArray();
-            }
-
-            foreach (var appender in appenders)
-            {
-                try
-                {
-                    if (appender.IsEnabled && appender.SupportedLevels.Contains(message.Level))
-                    {
-                        appender.WriteLog(message);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    HandleInternalError(ex);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 兼容旧版本的WriteToAppenders方法（用于后台线程）
-        /// </summary>
-        private void WriteToAppenders(LogMessage message)
-        {
-            // 在后台线程中，只处理异步输出器
-            WriteToAsyncAppenders(message);
         }
         #endregion
 
@@ -1067,27 +964,44 @@ namespace EZLogger
             RefreshAppenders();
         }
 
+        public void OpenLogFolder()
+        {
+            // 打开日志文件
+            var folderPath = _configuration.GetLogFolderPath();
+#if UNITY_EDITOR_WIN
+                // Windows平台：使用explorer命令
+                folderPath = folderPath.Replace('/', '\\'); // 统一使用反斜杠
+                System.Diagnostics.Process.Start("explorer.exe", $"\"{folderPath}\"");
+                Debug.Log($"[EZLogger] 在Windows资源管理器中打开: {folderPath}");
 
+#elif UNITY_EDITOR_OSX
+                // macOS平台：使用open命令
+                System.Diagnostics.Process.Start("open", $"\"{folderPath}\"");
+                Debug.Log($"[EZLogger] 在macOS Finder中打开: {folderPath}");
+
+#elif UNITY_EDITOR_LINUX
+                // Linux平台：使用xdg-open命令
+                System.Diagnostics.Process.Start("xdg-open", $"\"{folderPath}\"");
+                Debug.Log($"[EZLogger] 在Linux文件管理器中打开: {folderPath}");
+
+#else
+            // 通用方法：直接使用路径启动（可能不适用于所有平台）
+            System.Diagnostics.Process.Start(folderPath);
+            Debug.Log($"[EZLogger] 使用通用方法打开文件夹: {folderPath}");
+#endif
+        }
         #endregion
 
         #region 刷新和释放
         /// <summary>
-        /// 刷新所有输出器
+        /// 刷新所有输出器 - 优化后直接刷新
         /// </summary>
         public void Flush()
         {
             if (_isDisposed)
                 return;
 
-            // 等待队列处理完毕
-            int waitCount = 0;
-            while (!_logQueue.IsEmpty && waitCount < 100)
-            {
-                Thread.Sleep(10);
-                waitCount++;
-            }
-
-            // 刷新所有输出器
+            // 直接刷新所有输出器，让它们自己处理内部队列
             lock (_appendersLock)
             {
                 foreach (var appender in _appenders)
@@ -1114,23 +1028,7 @@ namespace EZLogger
 
             _isDisposed = true;
 
-            // 停止写入线程
-            _isRunning = false;
-            if (_writeThread != null && _writeThread.IsAlive)
-            {
-                if (!_writeThread.Join(1000))
-                {
-                    // 如果线程在1秒内没有正常结束，强制终止
-                    try
-                    {
-                        _writeThread.Abort();
-                    }
-                    catch (ThreadAbortException)
-                    {
-                        // 忽略线程终止异常
-                    }
-                }
-            }
+            // 不再需要停止主写入线程（已移除）
 
             // 停止服务器上报线程
             _isServerReportRunning = false;
@@ -1160,8 +1058,7 @@ namespace EZLogger
             Flush();
             ClearAppenders();
 
-            // 清空队列
-            _logQueue?.Clear();
+            // 不再需要清空主队列（已移除）
         }
         #endregion
     }
