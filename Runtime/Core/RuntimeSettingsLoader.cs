@@ -71,7 +71,7 @@ namespace EZLogger
             try
             {
                 string filePath = Path.Combine(Application.streamingAssetsPath, SETTINGS_STREAMING_PATH);
-
+                Debug.Log($"[EZLogger] 从StreamingAssets加载配置: {filePath}");
                 if (File.Exists(filePath))
                 {
                     string json = File.ReadAllText(filePath);
@@ -115,7 +115,6 @@ namespace EZLogger
             return new LoggerConfiguration
             {
                 GlobalEnabledLevels = LogLevel.WarningAndAbove, // 只保留警告和错误
-                PerformanceMode = true,
                 EnableStackTrace = false,
                 UnityConsole = new UnityConsoleConfig
                 {
@@ -192,7 +191,6 @@ namespace EZLogger
     public class SerializableLoggerConfiguration
     {
         public LogLevel globalEnabledLevels = LogLevel.All;
-        public bool performanceMode = false;
         public bool enableStackTrace = true;
         public LogLevel stackTraceMinLevel = LogLevel.Warning;
         public int maxStackTraceDepth = 10;

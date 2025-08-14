@@ -19,13 +19,20 @@ namespace EZLogger.Appenders
         /// <summary>是否支持异步写入（文件输出器为true，控制台输出器为false）</summary>
         bool SupportsAsyncWrite { get; }
 
+        /// <summary>是否需要Update驱动（WebGL平台的输出器为true）</summary>
+        bool RequiresUpdate { get; }
+
         /// <summary>
         /// 写入日志消息（输出器自决定同步/异步）
         /// </summary>
         /// <param name="message">日志消息</param>
         void WriteLog(LogMessage message);
 
-
+        /// <summary>
+        /// Update驱动的处理方法，用于WebGL平台分帧处理
+        /// </summary>
+        /// <returns>本次处理耗时（毫秒）</returns>
+        float Update();
 
         /// <summary>
         /// 刷新缓冲区
@@ -56,6 +63,9 @@ namespace EZLogger.Appenders
         /// <summary>是否支持异步写入</summary>
         public abstract bool SupportsAsyncWrite { get; }
 
+        /// <summary>是否需要Update驱动（默认实现基于平台检测）</summary>
+        public virtual bool RequiresUpdate => !PlatformCapabilities.SupportsThreading;
+
         /// <summary>是否已初始化</summary>
         protected bool IsInitialized { get; private set; }
 
@@ -84,6 +94,15 @@ namespace EZLogger.Appenders
                 // 输出器内部错误，避免递归
                 HandleInternalError(ex);
             }
+        }
+
+        /// <summary>
+        /// Update驱动的处理方法（默认实现为空）
+        /// </summary>
+        public virtual float Update()
+        {
+            // 默认实现：不需要Update处理的输出器返回0
+            return 0f;
         }
 
 

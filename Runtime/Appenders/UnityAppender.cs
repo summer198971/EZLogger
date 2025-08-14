@@ -12,6 +12,9 @@ namespace EZLogger.Appenders
         /// <summary>Unity控制台输出器必须同步，以保证与Unity原生Debug API的顺序一致</summary>
         public override bool SupportsAsyncWrite => false;
 
+        /// <summary>Unity控制台输出器不需要Update驱动，因为它是同步的</summary>
+        public override bool RequiresUpdate => false;
+
         private UnityConsoleConfig _config = new UnityConsoleConfig();
 
         /// <summary>专用StringBuilder缓存，避免重复分配</summary>
@@ -75,13 +78,14 @@ namespace EZLogger.Appenders
         private string FormatMessage(LogMessage message)
         {
             _stringBuilder.Clear();
-
+#if UNITY_EDITOR
             if (_config.EnableColors)
             {
                 _stringBuilder.Append("<color=");
                 _stringBuilder.Append(message.Level.GetUnityColor());
                 _stringBuilder.Append(">");
             }
+#endif
             _stringBuilder.Append("[F:");
             _stringBuilder.Append(message.FrameCount);
             _stringBuilder.Append("]");
@@ -98,12 +102,12 @@ namespace EZLogger.Appenders
             _stringBuilder.Append("[");
             _stringBuilder.Append(message.Tag);
             _stringBuilder.Append("]");
-
+#if UNITY_EDITOR
             if (_config.EnableColors)
             {
                 _stringBuilder.Append("</color>");
             }
-
+#endif
             // 添加消息内容
             _stringBuilder.Append(" ");
             _stringBuilder.Append(message.Message);

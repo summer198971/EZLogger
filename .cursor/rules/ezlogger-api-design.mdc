@@ -86,7 +86,6 @@ public interface ILogAppender
 ```csharp
 var config = LoggerConfiguration.CreateDevelopment();
 config.GlobalEnabledLevels = LogLevel.All;
-config.PerformanceMode = false;
 EZLoggerManager.Instance.Configuration = config;
 ```
 

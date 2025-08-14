@@ -227,12 +227,10 @@ catch (Exception ex)
 // 开发环境配置
 var devConfig = LoggerConfiguration.CreateDevelopment();
 devConfig.GlobalEnabledLevels = LogLevel.All;
-devConfig.PerformanceMode = false;
 
 // 发布环境配置
 var releaseConfig = LoggerConfiguration.CreateRelease();
 releaseConfig.GlobalEnabledLevels = LogLevel.ErrorAndWarning;
-releaseConfig.PerformanceMode = true;
 
 // 应用配置
 EZLoggerManager.Instance.Configuration = devConfig;

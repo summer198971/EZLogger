@@ -302,12 +302,6 @@ void DemonstrateRuntimeConfiguration()
     EZLog.Log?.Log("Config", "=== 运行时配置演示 ===");
     EZLog.Log?.LogFormat("Config", "堆栈跟踪: {0}", config.EnableStackTrace);
     
-    // 临时修改配置
-    var originalMode = config.PerformanceMode;
-    config.PerformanceMode = !originalMode;
     
-    // 恢复配置
-    config.PerformanceMode = originalMode;
-    EZLog.Log?.Log("Config", "配置已恢复");
 }
 ```

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
+using EZLogger.Utils;
 using UnityEngine;
 
 namespace EZLogger.Appenders
@@ -33,8 +34,15 @@ namespace EZLogger.Appenders
         // 字符串构建缓存 - 每个FileAppender实例独享，线程安全由WriteThread保证
         private readonly StringBuilder _stringBuilder = new StringBuilder(512);
 
+        // WebGL模式专用字段
+        private readonly System.Collections.Generic.List<LogMessage> _webglQueue = new System.Collections.Generic.List<LogMessage>();
+        private WebGLPerformanceConfig? _webglConfig;
+
         public override string Name => "FileAppender";
-        public override bool SupportsAsyncWrite => true;
+        public override bool SupportsAsyncWrite => PlatformCapabilities.SupportsThreading;
+
+        /// <summary>WebGL平台需要Update驱动</summary>
+        public override bool RequiresUpdate => !PlatformCapabilities.SupportsThreading;
 
         /// <summary>
         /// 核心初始化逻辑
@@ -45,9 +53,20 @@ namespace EZLogger.Appenders
 
             if (_config.Enabled)
             {
+                Debug.Log($"[EZLogger] 初始化文件输出器: {_config.LogDirectory}");
                 OpenLogFile();
-                StartWriteThread();
-                StartSizeCheckTimer();
+
+                if (PlatformCapabilities.SupportsThreading)
+                {
+                    // 多线程平台：使用原有逻辑
+                    StartWriteThread();
+                    StartSizeCheckTimer();
+                }
+                else
+                {
+                    // WebGL平台：初始化WebGL配置和监控
+                    InitializeWebGLMode();
+                }
             }
         }
 
@@ -61,16 +80,25 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>
-        /// 核心写入逻辑（放入队列，异步处理）
+        /// 核心写入逻辑（根据平台选择处理方式）
         /// </summary>
         protected override void WriteLogCore(LogMessage message)
         {
             if (_config?.Enabled != true)
                 return;
 
-            lock (_queueLock)
+            if (PlatformCapabilities.SupportsThreading)
             {
-                _messageQueue.Enqueue(message);
+                // 多线程平台：使用原有队列逻辑
+                lock (_queueLock)
+                {
+                    _messageQueue.Enqueue(message);
+                }
+            }
+            else
+            {
+                // WebGL平台：加入WebGL队列等待Update处理
+                EnqueueForWebGL(message);
             }
         }
 
@@ -228,6 +256,7 @@ namespace EZLogger.Appenders
                 // 写入启动标记
                 _streamWriter.WriteLine(BuildStartMessage());
                 _streamWriter.Flush();
+                Debug.Log($"[EZLogger] 打开日志文件: {_currentFilePath}");
             }
             catch (Exception ex)
             {
@@ -567,5 +596,128 @@ namespace EZLogger.Appenders
             // 避免无限递归，直接输出到Unity控制台
             UnityEngine.Debug.LogError(BuildErrorMessage(ex.Message));
         }
+
+        #region WebGL平台专用方法
+
+        /// <summary>
+        /// 初始化WebGL模式
+        /// </summary>
+        private void InitializeWebGLMode()
+        {
+            _webglConfig = WebGLPerformanceConfig.CreateDefault();
+            UnityEngine.Debug.Log($"[FileAppender] WebGL模式已启用 - {_webglConfig}");
+        }
+
+        /// <summary>
+        /// WebGL平台的消息入队（WebGL是单线程，不需要锁）
+        /// </summary>
+        private void EnqueueForWebGL(LogMessage message)
+        {
+            _webglQueue.Add(message);
+
+            // 队列溢出保护
+            if (_webglQueue.Count > _webglConfig?.MaxQueueSize)
+            {
+                HandleQueueOverflow();
+            }
+        }
+
+        /// <summary>
+        /// 处理队列溢出
+        /// </summary>
+        private void HandleQueueOverflow()
+        {
+            if (_webglConfig == null) return;
+
+            int removeCount = _webglQueue.Count - _webglConfig.MaxQueueSize + _webglConfig.BatchSize;
+
+            switch (_webglConfig.OverflowStrategy)
+            {
+                case QueueOverflowStrategy.DropOldest:
+                    for (int i = 0; i < removeCount && _webglQueue.Count > 0; i++)
+                    {
+                        _webglQueue.RemoveAt(0);
+                    }
+                    break;
+
+                case QueueOverflowStrategy.DropNewest:
+                    for (int i = 0; i < removeCount && _webglQueue.Count > 0; i++)
+                    {
+                        _webglQueue.RemoveAt(_webglQueue.Count - 1);
+                    }
+                    break;
+
+                case QueueOverflowStrategy.Block:
+                    // 不移除，但这可能导致内存问题
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// WebGL平台的Update处理 - 分帧写入（单线程，无需锁）
+        /// </summary>
+        public override float Update()
+        {
+            if (!RequiresUpdate || _config?.Enabled != true || _webglConfig == null)
+                return 0f;
+
+            float startTime = UnityEngine.Time.realtimeSinceStartup * 1000f; // 转换为毫秒
+            int processedCount = 0;
+
+            // 批量处理队列中的消息
+            while (processedCount < _webglConfig.BatchSize && _webglQueue.Count > 0)
+            {
+                LogMessage message = _webglQueue[0];
+                _webglQueue.RemoveAt(0);
+
+                // 写入单条消息
+                WriteToFileSync(message);
+                processedCount++;
+
+                // 检查耗时，避免超出预算
+                float elapsedTime = (UnityEngine.Time.realtimeSinceStartup * 1000f) - startTime;
+                if (elapsedTime >= _webglConfig.MaxUpdateTimePerFrame - 1.0f) // 留1ms缓冲
+                    break;
+            }
+
+            return (UnityEngine.Time.realtimeSinceStartup * 1000f) - startTime;
+        }
+
+        /// <summary>
+        /// 同步写入文件（WebGL平台使用）
+        /// </summary>
+        private void WriteToFileSync(LogMessage message)
+        {
+            if (_streamWriter == null)
+                return;
+
+            lock (_fileLock)
+            {
+                try
+                {
+                    string logEntry = FormatLogMessage(message);
+                    _streamWriter.WriteLine(logEntry);
+                    _streamWriter.Flush();
+                }
+                catch (Exception ex)
+                {
+                    HandleInternalError(ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 更新WebGL性能配置
+        /// </summary>
+        public void UpdateWebGLConfig(WebGLPerformanceConfig? config)
+        {
+            if (config != null && config.Validate())
+            {
+                _webglConfig = config;
+            }
+        }
+
+        #endregion
+
     }
 }

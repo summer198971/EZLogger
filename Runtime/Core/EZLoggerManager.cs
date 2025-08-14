@@ -18,7 +18,7 @@ namespace EZLogger
     public sealed class EZLoggerManager : ILogger, IDisposable
     {
         #region 单例实现
-        private static volatile EZLoggerManager _instance;
+        private static volatile EZLoggerManager? _instance;
         private static readonly object _instanceLock = new object();
 
         /// <summary>
@@ -59,10 +59,14 @@ namespace EZLogger
         // 服务器上报相关
         private readonly Queue<string> _errorQueue = new Queue<string>();
         private readonly object _errorQueueLock = new object();
-        private Thread _serverReportThread;
+        private Thread? _serverReportThread;
         private volatile bool _isServerReportRunning;
         private readonly Dictionary<string, object> _reportExtraData = new Dictionary<string, object>();
         private string _serverUrl = string.Empty;
+
+        // WebGL支持相关
+        private EZLoggerUpdateDriver? _updateDriver;
+        private GameObject? _updateDriverObject;
 
         /// <summary>日志记录器名称</summary>
         public string Name => "EZLogger";
@@ -86,7 +90,7 @@ namespace EZLogger
         private LogLevel _enabledLevels = LogLevel.All;
 
         /// <summary>日志级别变化事件</summary>
-        public static event System.Action<LogLevel> OnLevelsChanged;
+        public static event System.Action<LogLevel>? OnLevelsChanged;
 
         /// <summary>当前配置</summary>
         public LoggerConfiguration Configuration
@@ -156,6 +160,12 @@ namespace EZLogger
 
             // 初始化设备信息
             InitializeDeviceInfo();
+
+            // WebGL平台需要创建Update驱动器
+            if (PlatformCapabilities.RequiresUpdateDriven)
+            {
+                InitializeUpdateDriver();
+            }
 
             // 添加默认的Unity输出器（在所有其他初始化完成后）
             AddDefaultAppenders();
@@ -518,6 +528,12 @@ namespace EZLogger
             lock (_appendersLock)
             {
                 _appenders.Add(appender);
+
+                // 如果需要Update驱动，注册到驱动器
+                if (appender.RequiresUpdate && _updateDriver != null)
+                {
+                    _updateDriver.RegisterAppender(appender);
+                }
             }
         }
 
@@ -531,7 +547,14 @@ namespace EZLogger
 
             lock (_appendersLock)
             {
-                return _appenders.Remove(appender);
+                bool removed = _appenders.Remove(appender);
+
+                if (removed && appender.RequiresUpdate && _updateDriver != null)
+                {
+                    _updateDriver.UnregisterAppender(appender);
+                }
+
+                return removed;
             }
         }
 
@@ -679,6 +702,52 @@ namespace EZLogger
         private void HandleInternalError(Exception ex)
         {
             UnityEngine.Debug.LogError($"[EZLogger] Internal error: {ex.Message}");
+        }
+
+        /// <summary>
+        /// 初始化Update驱动器（仅WebGL平台）
+        /// </summary>
+        private void InitializeUpdateDriver()
+        {
+            try
+            {
+                _updateDriverObject = new GameObject("EZLogger_UpdateDriver")
+                {
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+
+                _updateDriver = _updateDriverObject.AddComponent<EZLoggerUpdateDriver>();
+                _updateDriver.Initialize();
+
+                // 确保在场景切换时不被销毁
+                UnityEngine.Object.DontDestroyOnLoad(_updateDriverObject);
+
+                Debug.Log("[EZLogger] Update驱动器已初始化");
+            }
+            catch (Exception ex)
+            {
+                HandleInternalError(ex);
+            }
+        }
+
+        /// <summary>
+        /// 获取Update驱动器（用于调试和监控）
+        /// </summary>
+        internal EZLoggerUpdateDriver? GetUpdateDriver()
+        {
+            return _updateDriver;
+        }
+
+        /// <summary>
+        /// 获取WebGL状态信息
+        /// </summary>
+        public string GetWebGLStatus()
+        {
+            if (_updateDriver != null)
+            {
+                return $"WebGL状态: 注册输出器={_updateDriver.RegisteredAppendersCount}";
+            }
+            return "WebGL驱动器未启用";
         }
         #endregion
 
@@ -964,31 +1033,193 @@ namespace EZLogger
             RefreshAppenders();
         }
 
-        public void OpenLogFolder()
+        /// <summary>
+        /// 打开日志文件夹 - 跨平台支持，包括WebGL平台的特殊处理
+        /// </summary>
+        /// <param name="openMode">WebGL平台的打开模式：download=下载文件，list=显示文件列表</param>
+        public void OpenLogFolder(string openMode = "list")
         {
-            // 打开日志文件
             var folderPath = _configuration.GetLogFolderPath();
-#if UNITY_EDITOR_WIN
-                // Windows平台：使用explorer命令
+            Debug.Log($"[EZLogger] 尝试打开日志文件夹: {folderPath}");
+
+            try
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // WebGL平台：使用特殊的文件访问方式
+                HandleWebGLLogFolder(folderPath, openMode);
+#elif UNITY_EDITOR_WIN
+                // Windows编辑器：使用explorer命令
                 folderPath = folderPath.Replace('/', '\\'); // 统一使用反斜杠
                 System.Diagnostics.Process.Start("explorer.exe", $"\"{folderPath}\"");
                 Debug.Log($"[EZLogger] 在Windows资源管理器中打开: {folderPath}");
-
 #elif UNITY_EDITOR_OSX
-                // macOS平台：使用open命令
+                // macOS编辑器：使用open命令
                 System.Diagnostics.Process.Start("open", $"\"{folderPath}\"");
                 Debug.Log($"[EZLogger] 在macOS Finder中打开: {folderPath}");
-
 #elif UNITY_EDITOR_LINUX
-                // Linux平台：使用xdg-open命令
+                // Linux编辑器：使用xdg-open命令
                 System.Diagnostics.Process.Start("xdg-open", $"\"{folderPath}\"");
                 Debug.Log($"[EZLogger] 在Linux文件管理器中打开: {folderPath}");
-
 #else
-            // 通用方法：直接使用路径启动（可能不适用于所有平台）
-            System.Diagnostics.Process.Start(folderPath);
-            Debug.Log($"[EZLogger] 使用通用方法打开文件夹: {folderPath}");
+                // 其他平台运行时处理
+                HandleRuntimeLogFolder(folderPath);
 #endif
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[EZLogger] 打开日志文件夹失败: {ex.Message}");
+                
+                // 在WebGL平台提供备用方案
+#if UNITY_WEBGL && !UNITY_EDITOR
+                Debug.Log("[EZLogger] 尝试使用备用方案...");
+                try
+                {
+                    WebGLFileSyncUtil.ShowLogFilesList(folderPath);
+                }
+                catch (Exception fallbackEx)
+                {
+                    Debug.LogError($"[EZLogger] 备用方案也失败了: {fallbackEx.Message}");
+                }
+#endif
+            }
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        /// <summary>
+        /// 处理WebGL平台的日志文件夹访问
+        /// </summary>
+        /// <param name="folderPath">文件夹路径</param>
+        /// <param name="openMode">打开模式</param>
+        private void HandleWebGLLogFolder(string folderPath, string openMode)
+        {
+            Debug.Log($"[EZLogger] WebGL平台日志文件夹访问 - 模式: {openMode}");
+            Debug.Log($"[EZLogger] {WebGLFileSyncUtil.GetWebGLStatus()}");
+            
+            // 显示安全提示信息
+            Debug.Log($"[EZLogger] {WebGLFileSyncUtil.GetWebGLSecurityInfo()}");
+            
+            switch (openMode.ToLower())
+            {
+                case "download":
+                    // 下载模式：将日志文件夹打包下载
+                    Debug.Log("[EZLogger] 启动下载模式 - 将日志文件夹打包为ZIP下载");
+                    WebGLFileSyncUtil.DownloadLogFolder(folderPath);
+                    break;
+                    
+                case "list":
+                default:
+                    // 列表模式：在新标签页显示文件列表（默认模式）
+                    Debug.Log("[EZLogger] 启动列表模式 - 在新标签页显示日志文件列表");
+                    WebGLFileSyncUtil.ShowLogFilesList(folderPath);
+                    break;
+            }
+        }
+#endif
+
+        /// <summary>
+        /// 处理运行时平台的日志文件夹访问
+        /// </summary>
+        /// <param name="folderPath">文件夹路径</param>
+        private void HandleRuntimeLogFolder(string folderPath)
+        {
+            switch (Application.platform)
+            {
+                case RuntimePlatform.WindowsPlayer:
+                    // Windows运行时
+                    folderPath = folderPath.Replace('/', '\\');
+                    System.Diagnostics.Process.Start("explorer.exe", $"\"{folderPath}\"");
+                    Debug.Log($"[EZLogger] Windows运行时打开: {folderPath}");
+                    break;
+                    
+                case RuntimePlatform.OSXPlayer:
+                    // macOS运行时
+                    System.Diagnostics.Process.Start("open", $"\"{folderPath}\"");
+                    Debug.Log($"[EZLogger] macOS运行时打开: {folderPath}");
+                    break;
+                    
+                case RuntimePlatform.LinuxPlayer:
+                    // Linux运行时
+                    System.Diagnostics.Process.Start("xdg-open", $"\"{folderPath}\"");
+                    Debug.Log($"[EZLogger] Linux运行时打开: {folderPath}");
+                    break;
+                    
+                case RuntimePlatform.Android:
+                    // Android平台
+                    Debug.LogWarning("[EZLogger] Android平台无法直接打开文件夹，日志路径: " + folderPath);
+                    Debug.Log("[EZLogger] 建议使用adb命令或设备文件管理器查看日志文件");
+                    break;
+                    
+                case RuntimePlatform.IPhonePlayer:
+                    // iOS平台
+                    Debug.LogWarning("[EZLogger] iOS平台无法直接打开文件夹，日志路径: " + folderPath);
+                    Debug.Log("[EZLogger] 日志文件位于应用沙盒中，可通过iTunes或Xcode查看");
+                    break;
+                    
+                default:
+                    // 通用方案
+                    try
+                    {
+                        System.Diagnostics.Process.Start(folderPath);
+                        Debug.Log($"[EZLogger] 使用通用方法打开: {folderPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogWarning($"[EZLogger] 当前平台({Application.platform})不支持直接打开文件夹: {ex.Message}");
+                        Debug.Log($"[EZLogger] 日志文件路径: {folderPath}");
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// WebGL平台专用：下载日志文件夹
+        /// </summary>
+        public void DownloadLogFolder()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            var folderPath = _configuration.GetLogFolderPath();
+            Debug.Log("[EZLogger] 开始下载日志文件夹...");
+            WebGLFileSyncUtil.DownloadLogFolder(folderPath);
+#else
+            Debug.LogWarning("[EZLogger] DownloadLogFolder仅在WebGL平台可用");
+#endif
+        }
+
+        /// <summary>
+        /// WebGL平台专用：显示日志文件列表
+        /// </summary>
+        public void ShowLogFilesList()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            var folderPath = _configuration.GetLogFolderPath();
+            Debug.Log("[EZLogger] 显示日志文件列表...");
+            WebGLFileSyncUtil.ShowLogFilesList(folderPath);
+#else
+            Debug.LogWarning("[EZLogger] ShowLogFilesList仅在WebGL平台可用");
+#endif
+        }
+
+        /// <summary>
+        /// 获取平台特定的日志访问说明
+        /// </summary>
+        /// <returns>说明文本</returns>
+        public string GetLogAccessInfo()
+        {
+            switch (Application.platform)
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                case RuntimePlatform.WebGLPlayer:
+                    return WebGLFileSyncUtil.GetWebGLSecurityInfo();
+#endif
+                case RuntimePlatform.Android:
+                    return "Android平台:\n• 日志存储在应用私有目录\n• 需要root权限或adb工具访问\n• 路径: " + _configuration.GetLogFolderPath();
+                    
+                case RuntimePlatform.IPhonePlayer:
+                    return "iOS平台:\n• 日志存储在应用沙盒中\n• 可通过iTunes文件共享或Xcode访问\n• 路径: " + _configuration.GetLogFolderPath();
+                    
+                default:
+                    return "桌面平台:\n• 可直接通过文件管理器访问\n• 路径: " + _configuration.GetLogFolderPath();
+            }
         }
         #endregion
 
@@ -1054,11 +1285,34 @@ namespace EZLogger
                 SystemLogMonitor.Instance.Release();
             }
 
+            // 清理Update驱动器
+            if (_updateDriverObject != null)
+            {
+                try
+                {
+                    if (UnityEngine.Application.isPlaying)
+                    {
+                        UnityEngine.Object.Destroy(_updateDriverObject);
+                    }
+                    else
+                    {
+                        UnityEngine.Object.DestroyImmediate(_updateDriverObject);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    HandleInternalError(ex);
+                }
+                finally
+                {
+                    _updateDriverObject = null;
+                    _updateDriver = null;
+                }
+            }
+
             // 刷新并释放所有输出器
             Flush();
             ClearAppenders();
-
-            // 不再需要清空主队列（已移除）
         }
         #endregion
     }
@@ -1076,11 +1330,11 @@ namespace EZLogger
 
         #region 零开销条件日志记录器
         // 缓存条件日志记录器实例，避免重复创建
-        private static ConditionalLogger _cachedL;  // Log
-        private static ConditionalLogger _cachedW;  // Warning
-        private static ConditionalLogger _cachedA;  // Assert
-        private static ConditionalLogger _cachedE;  // Error
-        private static ConditionalLogger _cachedX;  // Exception
+        private static ConditionalLogger? _cachedL;  // Log
+        private static ConditionalLogger? _cachedW;  // Warning
+        private static ConditionalLogger? _cachedA;  // Assert
+        private static ConditionalLogger? _cachedE;  // Error
+        private static ConditionalLogger? _cachedX;  // Exception
 
         // 缓存上次检查的级别状态，用于检测变化
         private static LogLevel _lastCheckedLevels = LogLevel.None;
@@ -1258,6 +1512,20 @@ namespace EZLogger
 
         /// <summary>手动刷新输出器配置</summary>
         public static void RefreshConfiguration() => EZLoggerManager.Instance.RefreshConfiguration();
+
+        /// <summary>打开日志文件夹</summary>
+        /// <param name="openMode">WebGL平台的打开模式：download=下载文件，list=显示文件列表</param>
+        public static void OpenLogFolder(string openMode = "list") => EZLoggerManager.Instance.OpenLogFolder(openMode);
+
+        /// <summary>WebGL平台专用：下载日志文件夹</summary>
+        public static void DownloadLogFolder() => EZLoggerManager.Instance.DownloadLogFolder();
+
+        /// <summary>WebGL平台专用：显示日志文件列表</summary>
+        public static void ShowLogFilesList() => EZLoggerManager.Instance.ShowLogFilesList();
+
+        /// <summary>获取平台特定的日志访问说明</summary>
+        /// <returns>说明文本</returns>
+        public static string GetLogAccessInfo() => EZLoggerManager.Instance.GetLogAccessInfo();
 
         #region Logger类型管理
         /// <summary>注册自定义Logger类型</summary>
