@@ -4,6 +4,7 @@
 
 EZ Logger Web日志查看器是一个现代化的日志分析工具，让你能够在任何支持现代Web标准的浏览器中查看和分析Unity游戏的日志文件。
 
+**🌐 在线体验**: [https://summer198971.github.io/EZLogger/](https://summer198971.github.io/EZLogger/) - 无需下载，立即使用！  
 **🚀 零配置使用**: 无需安装任何软件或启动服务器，直接双击HTML文件即可使用！
 
 ![Web Log Viewer Interface](images/web-log-viewer-interface.png)
@@ -57,7 +58,13 @@ EZLog.AddAppender(new FileAppender("logs/game.log"));
 
 ### 2. 打开Web查看器
 
-**直接打开HTML文件（推荐）**
+**在线版本（推荐）**
+```
+直接访问: https://summer198971.github.io/EZLogger/
+点击"启动日志查看器"按钮即可开始使用
+```
+
+**本地版本**
 ```
 方法1: 双击项目中的 Web/logread.html 文件
 方法2: 在浏览器中按 Ctrl+O，选择 logread.html 文件

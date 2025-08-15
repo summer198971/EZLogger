@@ -124,11 +124,16 @@ EZ Logger 内置了强大的**Web日志查看器**，让你能够在浏览器中
 
 ### 🚀 快速开始
 
-1. **运行游戏**: 确保EZ Logger已配置文件输出器，游戏运行时会自动生成日志文件
+#### 🌐 在线版本（推荐）
+1. **访问在线版**: [https://summer198971.github.io/EZLogger/](https://summer198971.github.io/EZLogger/)
+2. **加载分析**: 点击"选择日志文件"按钮，选择Unity生成的`.txt`日志文件进行分析
+
+#### 📱 本地版本
+1. **运行游戏**: 确保EZ Logger已配置文件输出器，游戏运行时会自动生成日志文件  
 2. **打开查看器**: 直接双击项目中的 `Web/logread.html` 文件（位于插件源码目录）
 3. **加载分析**: 点击"选择日志文件"按钮，选择Unity生成的`.txt`日志文件进行分析
 
-> 💡 **无需服务器**: Web查看器支持本地文件访问，无需启动任何Web服务器！
+> 💡 **零下载使用**: 推荐使用在线版本，无需下载任何文件即可分析日志！
 
 ### 💡 典型使用场景
 
@@ -142,7 +147,8 @@ EZ Logger 内置了强大的**Web日志查看器**，让你能够在浏览器中
 
 > 💡 **相比Unity Console的优势**: Web查看器支持大文件处理、历史日志查看、团队共享、移动设备访问等Unity Console无法提供的功能。
 
-详细使用指南请参见：[Web日志查看器文档](Documentation~/web-log-viewer.md)
+**🌐 在线体验**: [https://summer198971.github.io/EZLogger/](https://summer198971.github.io/EZLogger/)  
+**📚 详细文档**: [Web日志查看器使用指南](Documentation~/web-log-viewer.md)
 
 ## 🚀 快速开始
 
