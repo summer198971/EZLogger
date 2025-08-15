@@ -15,7 +15,6 @@ namespace EZLogger.Editor
 
         // 折叠状态
         private bool showBasicSettings = true;
-        private bool showAsyncSettings = true;
         private bool showUnityConsoleSettings = true;
         private bool showFileOutputSettings = true;
         private bool showServerSettings = true;
@@ -55,8 +54,7 @@ namespace EZLogger.Editor
             showBasicSettings = DrawFoldoutSection("基础配置", showBasicSettings, DrawBasicSettings);
             EditorGUILayout.Space();
 
-            showAsyncSettings = DrawFoldoutSection("异步处理", showAsyncSettings, DrawAsyncSettings);
-            EditorGUILayout.Space();
+
 
             showUnityConsoleSettings = DrawFoldoutSection("Unity控制台", showUnityConsoleSettings, DrawUnityConsoleSettings);
             EditorGUILayout.Space();
@@ -167,16 +165,7 @@ namespace EZLogger.Editor
             }
         }
 
-        private void DrawAsyncSettings()
-        {
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxQueueSize"), new GUIContent("队列最大大小"));
 
-            // BufferSize - 未实现
-            var oldEnabled = GUI.enabled;
-            GUI.enabled = false;
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("bufferSize"), new GUIContent("缓冲区大小 (未实现)"));
-            GUI.enabled = oldEnabled;
-        }
 
         private void DrawUnityConsoleSettings()
         {

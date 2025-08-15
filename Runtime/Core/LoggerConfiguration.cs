@@ -96,11 +96,7 @@ namespace EZLogger
 
 
 
-        /// <summary>日志队列最大大小</summary>
-        public int MaxQueueSize = 1000;
 
-        /// <summary>日志缓冲区大小</summary>
-        public int BufferSize = 4096;
 
         /// <summary>文件输出配置</summary>
         public FileOutputConfig FileOutput = new FileOutputConfig();

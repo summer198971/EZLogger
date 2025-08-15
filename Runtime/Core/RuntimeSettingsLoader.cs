@@ -195,8 +195,6 @@ namespace EZLogger
         public bool enableStackTrace = true;
         public LogLevel stackTraceMinLevel = LogLevel.ErrorAndAbove;
         public int maxStackTraceDepth = 10;
-        public int maxQueueSize = 1000;
-        public int bufferSize = 4096;
 
         // Unity控制台配置
         public bool unityConsoleEnabled = true;
@@ -242,9 +240,7 @@ namespace EZLogger
                 GlobalEnabledLevels = globalEnabledLevels,
                 EnableStackTrace = enableStackTrace,
                 StackTraceMinLevel = stackTraceMinLevel,
-                MaxStackTraceDepth = maxStackTraceDepth,
-                MaxQueueSize = maxQueueSize,
-                BufferSize = bufferSize
+                MaxStackTraceDepth = maxStackTraceDepth
             };
 
             // Unity控制台配置
@@ -297,9 +293,7 @@ namespace EZLogger
                 globalEnabledLevels = config.GlobalEnabledLevels,
                 enableStackTrace = config.EnableStackTrace,
                 stackTraceMinLevel = config.StackTraceMinLevel,
-                maxStackTraceDepth = config.MaxStackTraceDepth,
-                maxQueueSize = config.MaxQueueSize,
-                bufferSize = config.BufferSize
+                maxStackTraceDepth = config.MaxStackTraceDepth
             };
 
             // Unity控制台

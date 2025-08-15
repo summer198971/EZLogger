@@ -23,14 +23,7 @@ namespace EZLogger.Editor
 
 
 
-        //[Header("异步处理")]
-        [Tooltip("日志队列最大大小")]
-        [Range(100, 10000)]
-        public int maxQueueSize = 1000;
 
-        [Tooltip("日志缓冲区大小")]
-        [Range(1024, 65536)]
-        public int bufferSize = 4096;
 
         [Header("Unity控制台")]
         [Tooltip("启用Unity控制台输出")]
@@ -122,9 +115,7 @@ namespace EZLogger.Editor
                 GlobalEnabledLevels = globalEnabledLevels,
                 EnableStackTrace = enableStackTrace,
                 StackTraceMinLevel = LogLevel.ErrorAndAbove, // 固定为Error和Exception级别
-                MaxStackTraceDepth = maxStackTraceDepth,
-                MaxQueueSize = maxQueueSize,
-                BufferSize = bufferSize
+                MaxStackTraceDepth = maxStackTraceDepth
             };
 
             // Unity控制台配置
@@ -176,8 +167,6 @@ namespace EZLogger.Editor
             enableStackTrace = config.EnableStackTrace;
             // stackTraceMinLevel 已移除，固定使用 ErrorAndAbove
             maxStackTraceDepth = config.MaxStackTraceDepth;
-            maxQueueSize = config.MaxQueueSize;
-            bufferSize = config.BufferSize;
 
             // Unity控制台
             if (config.UnityConsole != null)
