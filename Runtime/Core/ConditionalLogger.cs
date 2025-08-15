@@ -21,12 +21,13 @@ namespace EZLogger
 
         /// <summary>
         /// 记录日志 - 只有在级别启用时才会有实际开销
+        /// 支持智能堆栈跟踪：只在配置的级别才获取堆栈
         /// 可以被子类重写以实现特殊处理逻辑
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public virtual void Log(string tag, string message)
         {
-            // 基础实现：直接记录日志
+            // 基础实现：使用新的智能堆栈跟踪
             _logger.Log(_level, tag, message);
         }
 
@@ -75,57 +76,42 @@ namespace EZLogger
         }
 
         /// <summary>
-        /// 带堆栈跟踪的日志记录
+        /// 带堆栈跟踪的日志记录（高性能版本）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Log(string tag, string message, StackTrace stackTrace)
         {
-            var logMessage = new LogMessage(_level, tag, message,
-                FormatStackTrace(stackTrace), GetCurrentFrameCount());
+            // 使用StackTraceHelper格式化堆栈跟踪
+            string formattedStackTrace = null;
+            if (stackTrace != null)
+            {
+                try
+                {
+                    // 这里调用内部方法会有性能开销，但只在真正需要时调用
+                    formattedStackTrace = FormatStackTraceInternal(stackTrace);
+                }
+                catch
+                {
+                    // 如果格式化失败，忽略堆栈跟踪
+                    formattedStackTrace = null;
+                }
+            }
+
+            var logMessage = new LogMessage(_level, tag, message, formattedStackTrace,
+                StackTraceHelper.GetCurrentFrameCount());
 
             // 使用虚方法，让子类决定如何处理
             Log(logMessage);
         }
 
-        private string FormatStackTrace(StackTrace stackTrace)
+        /// <summary>
+        /// 内部堆栈跟踪格式化方法 - 使用StackTraceHelper的逻辑
+        /// </summary>
+        private string FormatStackTraceInternal(StackTrace stackTrace)
         {
-            var frames = stackTrace?.GetFrames();
-            if (frames == null || frames.Length == 0)
-                return null;
-
-            var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < frames.Length && i < 10; i++)
-            {
-                var frame = frames[i];
-                var method = frame.GetMethod();
-                var fileName = frame.GetFileName();
-
-                if (!string.IsNullOrEmpty(fileName))
-                {
-                    string assetPath = SimplifyFilePath(fileName);
-                    int line = frame.GetFileLineNumber();
-                    sb.AppendLine($"{assetPath}:{line} ({method?.DeclaringType?.Name}.{method?.Name})");
-                }
-            }
-            return sb.ToString();
-        }
-
-        private string SimplifyFilePath(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return string.Empty;
-
-            int assetsIndex = filePath.LastIndexOf("Assets", StringComparison.OrdinalIgnoreCase);
-            if (assetsIndex >= 0)
-            {
-                return filePath.Substring(assetsIndex).Replace('\\', '/');
-            }
-            return System.IO.Path.GetFileName(filePath);
-        }
-
-        private int GetCurrentFrameCount()
-        {
-            return UnityEngine.Time.frameCount;
+            // 将堆栈跟踪转换为字符串，然后使用StackTraceHelper格式化
+            string stackTraceStr = stackTrace?.ToString();
+            return StackTraceHelper.FormatSystemStackTrace(stackTraceStr);
         }
     }
 

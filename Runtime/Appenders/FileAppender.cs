@@ -199,7 +199,7 @@ namespace EZLogger.Appenders
         }
 
         /// <summary>
-        /// 格式化日志消息 - 零GC实现，包含帧率和线程信息
+        /// 格式化日志消息 - 零GC实现，包含帧率、线程信息和堆栈跟踪
         /// 在写入线程中调用，线程安全由调用上下文保证
         /// </summary>
         private string FormatLogMessage(LogMessage message)
@@ -250,7 +250,42 @@ namespace EZLogger.Appenders
             _stringBuilder.Append("] ");
             _stringBuilder.Append(message.Message);
 
+            // 🎯 添加堆栈跟踪信息（如果存在）
+            if (!string.IsNullOrEmpty(message.StackTrace))
+            {
+                _stringBuilder.AppendLine(); // 换行
+                _stringBuilder.Append("Stack Trace:");
+                _stringBuilder.AppendLine(); // 再换行
+
+                // 格式化堆栈跟踪，确保每行都有适当的缩进
+                FormatStackTraceForFile(message.StackTrace);
+            }
+
             return _stringBuilder.ToString();
+        }
+
+        /// <summary>
+        /// 为文件输出格式化堆栈跟踪
+        /// 确保堆栈跟踪在文件中易于阅读和解析
+        /// </summary>
+        private void FormatStackTraceForFile(string stackTrace)
+        {
+            if (string.IsNullOrEmpty(stackTrace))
+                return;
+
+            // 分割堆栈跟踪为行
+            var lines = stackTrace.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (!string.IsNullOrEmpty(trimmedLine))
+                {
+                    // 为每行堆栈跟踪添加缩进，便于在日志文件中区分
+                    _stringBuilder.Append("    "); // 4个空格缩进
+                    _stringBuilder.AppendLine(trimmedLine);
+                }
+            }
         }
 
         /// <summary>

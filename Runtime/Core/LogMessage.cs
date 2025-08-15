@@ -30,7 +30,7 @@ namespace EZLogger
         public readonly string StackTrace;
 
         /// <summary>
-        /// 构造函数
+        /// 构造函数 - 智能堆栈跟踪版本
         /// </summary>
         public LogMessage(LogLevel level, string tag, string message, string stackTrace = null, int frameCount = 0, TimezoneConfig timezoneConfig = null)
         {
@@ -38,9 +38,33 @@ namespace EZLogger
             Tag = tag ?? "DEFAULT";
             Message = message ?? string.Empty;
             Timestamp = GetConfiguredTime(timezoneConfig);
-            FrameCount = frameCount;
-            ThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            FrameCount = frameCount > 0 ? frameCount : StackTraceHelper.GetCurrentFrameCount();
+            ThreadId = StackTraceHelper.GetCurrentThreadId();
             StackTrace = stackTrace;
+        }
+
+        /// <summary>
+        /// 构造函数 - 自动堆栈跟踪版本（用于手动调用）
+        /// </summary>
+        public LogMessage(LogLevel level, string tag, string message, LoggerConfiguration config, TimezoneConfig timezoneConfig = null)
+        {
+            Level = level;
+            Tag = tag ?? "DEFAULT";
+            Message = message ?? string.Empty;
+            Timestamp = GetConfiguredTime(timezoneConfig);
+            FrameCount = StackTraceHelper.GetCurrentFrameCount();
+            ThreadId = StackTraceHelper.GetCurrentThreadId();
+
+            // 智能堆栈跟踪：只在需要时获取
+            if (StackTraceHelper.ShouldCaptureStackTrace(level, config))
+            {
+                // 跳过更多帧，因为是通过多层调用到达这里的
+                StackTrace = StackTraceHelper.CaptureStackTrace(skipFrames: 3, maxDepth: config?.MaxStackTraceDepth ?? 10);
+            }
+            else
+            {
+                StackTrace = null;
+            }
         }
 
         /// <summary>
@@ -68,87 +92,35 @@ namespace EZLogger
         }
 
         /// <summary>
-        /// 创建带有堆栈跟踪的日志消息
+        /// 创建带有系统堆栈跟踪的日志消息（用于系统错误）
         /// </summary>
+        public static LogMessage CreateWithSystemStackTrace(LogLevel level, string tag, string message, string systemStackTrace)
+        {
+            // 格式化系统提供的堆栈跟踪
+            string formattedStackTrace = StackTraceHelper.FormatSystemStackTrace(systemStackTrace);
+
+            return new LogMessage(level, tag, message, formattedStackTrace,
+                StackTraceHelper.GetCurrentFrameCount());
+        }
+
+        /// <summary>
+        /// 创建带有手动堆栈跟踪的日志消息（已废弃，推荐使用带配置的构造函数）
+        /// </summary>
+        [Obsolete("Use constructor with LoggerConfiguration instead for better performance")]
         public static LogMessage CreateWithStackTrace(LogLevel level, string tag, string message, int skipFrames = 1)
         {
             string stackTrace = null;
 
-            // 只在需要时获取堆栈跟踪
-            if (level >= LogLevel.Warning)
+            // 只在错误级别时获取堆栈跟踪（符合新的默认策略）
+            if (StackTraceHelper.IsErrorLevel(level))
             {
-                try
-                {
-                    var trace = new StackTrace(skipFrames, true);
-                    stackTrace = FormatStackTrace(trace);
-                }
-                catch
-                {
-                    // 忽略堆栈跟踪获取失败
-                }
+                stackTrace = StackTraceHelper.CaptureStackTrace(skipFrames + 1, 10);
             }
 
-            return new LogMessage(level, tag, message, stackTrace, GetFrameCount());
+            return new LogMessage(level, tag, message, stackTrace, StackTraceHelper.GetCurrentFrameCount());
         }
 
-        /// <summary>
-        /// 格式化堆栈跟踪信息
-        /// </summary>
-        private static string FormatStackTrace(StackTrace stackTrace)
-        {
-            if (stackTrace?.GetFrames() is not { Length: > 0 } frames)
-                return string.Empty;
 
-            var sb = new System.Text.StringBuilder();
-
-            for (int i = 0; i < frames.Length && i < 10; i++) // 限制最多10层
-            {
-                var frame = frames[i];
-                var method = frame.GetMethod();
-                var fileName = frame.GetFileName();
-
-                if (!string.IsNullOrEmpty(fileName))
-                {
-                    // 简化文件路径，只保留Assets后的部分
-                    string assetPath = SimplifyFilePath(fileName);
-                    int line = frame.GetFileLineNumber();
-                    sb.AppendLine($"{assetPath}:{line} ({method?.DeclaringType?.Name}.{method?.Name})");
-                }
-            }
-
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// 简化文件路径
-        /// </summary>
-        private static string SimplifyFilePath(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return string.Empty;
-
-            // 查找Assets目录
-            int assetsIndex = filePath.LastIndexOf("Assets", StringComparison.OrdinalIgnoreCase);
-            if (assetsIndex >= 0)
-            {
-                return filePath.Substring(assetsIndex).Replace('\\', '/');
-            }
-
-            // 如果没有Assets目录，返回文件名
-            return System.IO.Path.GetFileName(filePath);
-        }
-
-        /// <summary>
-        /// 获取当前帧数（Unity环境下）
-        /// </summary>
-        private static int GetFrameCount()
-        {
-#if UNITY_2018_1_OR_NEWER
-            return UnityEngine.Time.frameCount;
-#else
-            return 0;
-#endif
-        }
 
         /// <summary>
         /// 转换为字符串表示

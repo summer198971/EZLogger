@@ -25,7 +25,7 @@ namespace EZLogger
             config = LoadFromResources();
             if (config != null)
             {
-                Debug.Log("[EZLogger] 从Resources加载配置成功");
+                Debug.Log($"[EZLogger] 从Resources加载配置成功 - StackTraceMinLevel: {config.StackTraceMinLevel}");
                 return config;
             }
 
@@ -33,13 +33,14 @@ namespace EZLogger
             config = LoadFromStreamingAssets();
             if (config != null)
             {
-                Debug.Log("[EZLogger] 从StreamingAssets加载配置成功");
+                Debug.Log($"[EZLogger] 从StreamingAssets加载配置成功 - StackTraceMinLevel: {config.StackTraceMinLevel}");
                 return config;
             }
 
             // 3. 使用默认配置
-            Debug.Log("[EZLogger] 使用默认配置");
-            return CreateRuntimeDefaultConfiguration();
+            config = CreateRuntimeDefaultConfiguration();
+            Debug.Log($"[EZLogger] 使用默认配置 - StackTraceMinLevel: {config.StackTraceMinLevel}");
+            return config;
         }
 
         /// <summary>
@@ -192,7 +193,7 @@ namespace EZLogger
     {
         public LogLevel globalEnabledLevels = LogLevel.All;
         public bool enableStackTrace = true;
-        public LogLevel stackTraceMinLevel = LogLevel.Warning;
+        public LogLevel stackTraceMinLevel = LogLevel.ErrorAndAbove;
         public int maxStackTraceDepth = 10;
         public int maxQueueSize = 1000;
         public int bufferSize = 4096;

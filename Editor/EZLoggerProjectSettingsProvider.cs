@@ -88,8 +88,8 @@ namespace EZLogger.Editor
         {
             EditorGUILayout.LabelField("📋 功能实现状态", EditorStyles.boldLabel);
 
-            EditorGUILayout.HelpBox("✅ 已实现 (70%): 基础日志、零开销API、Unity控制台、文件输出(日期轮转)、基础服务器上报、系统监控、时区配置\n" +
-                                   "⚠️ 待实现 (30%): 自动堆栈跟踪、完整服务器配置、性能信息收集、扩展配置",
+            EditorGUILayout.HelpBox("✅ 已实现 (85%): 基础日志、零开销API、Unity控制台、文件输出(日期轮转)、智能堆栈跟踪、基础服务器上报、系统监控、时区配置\n" +
+                                   "⚠️ 待实现 (15%): 完整服务器配置、性能信息收集、扩展配置",
                                    MessageType.Info);
         }
 
@@ -148,21 +148,23 @@ namespace EZLogger.Editor
         {
             EditorGUILayout.PropertyField(serializedSettings.FindProperty("globalEnabledLevels"), new GUIContent("全局启用级别"));
 
-            // 堆栈跟踪相关 - 未实现
+            // 堆栈跟踪相关 - 已实现
             EditorGUILayout.Space(3);
-            EditorGUILayout.HelpBox("⚠️ 以下功能待实现", MessageType.Warning);
-            var oldEnabled = GUI.enabled;
-            GUI.enabled = false;
-            EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableStackTrace"), new GUIContent("启用堆栈跟踪 (未实现)"));
+            EditorGUILayout.HelpBox("✅ 堆栈跟踪功能已实现\n• 默认只在Error和Exception级别启用\n• 支持手动调用和系统错误的堆栈跟踪\n• 文件日志也包含堆栈信息", MessageType.Info);
+
+            EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableStackTrace"), new GUIContent("启用堆栈跟踪", "开启后将在Error和Exception级别记录堆栈跟踪"));
 
             if (settings.enableStackTrace)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("stackTraceMinLevel"), new GUIContent("堆栈跟踪最小级别 (未实现)"));
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxStackTraceDepth"), new GUIContent("最大堆栈深度 (未实现)"));
+                EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxStackTraceDepth"), new GUIContent("最大堆栈深度", "限制堆栈跟踪的最大层数，避免过长的堆栈影响性能"));
+
+                // 添加简化说明
+                EditorGUILayout.Space(3);
+                EditorGUILayout.LabelField("📝 堆栈跟踪只在Error和Exception级别记录，确保性能最优", EditorStyles.miniLabel);
+
                 EditorGUI.indentLevel--;
             }
-            GUI.enabled = oldEnabled;
         }
 
         private void DrawAsyncSettings()

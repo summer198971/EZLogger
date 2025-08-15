@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using EZLogger;
 
 namespace EZLoggerSamples
 {
@@ -46,6 +47,7 @@ namespace EZLoggerSamples
         public GameObject contentParentGO;
         public Button testLogButton;
         public Button clearConsoleButton;
+        public Button stackTracePerformanceButton;
 
         public Button OpenLogFileButton;
 
@@ -414,6 +416,11 @@ namespace EZLoggerSamples
             var openLogFileButtonGO = CreateButton("Open Log File", new Vector2(0.45f, 0.85f), new Vector2(0.6f, 0.9f));
             OpenLogFileButton = openLogFileButtonGO.GetComponent<Button>();
             OpenLogFileButton.onClick.AddListener(OpenLogFolder);
+
+            // 堆栈跟踪性能测试按钮
+            var performanceButtonGO = CreateButton("StackTrace Perf", new Vector2(0.65f, 0.85f), new Vector2(0.78f, 0.9f));
+            stackTracePerformanceButton = performanceButtonGO.GetComponent<Button>();
+            stackTracePerformanceButton.onClick.AddListener(RunStackTracePerformanceTest);
         }
 
         /// <summary>
@@ -1393,7 +1400,150 @@ namespace EZLoggerSamples
             // 测试零开销特性 - 即使禁用级别，这些调用也不会产生性能开销
             EZLogger.EZLog.Log?.Log("零开销测试", GetExpensiveString());
 
+            // 🎯 堆栈跟踪演示（每次都执行）
+            TestStackTraceFeatures();
+
             LogTestMessage($"测试 #{_testCounter} 完成");
+        }
+
+        /// <summary>
+        /// 测试堆栈跟踪功能（演示版本）
+        /// </summary>
+        private void TestStackTraceFeatures()
+        {
+            LogTestMessage("--- 堆栈跟踪演示开始 ---");
+
+            // 堆栈跟踪功能已正常工作
+
+            // 1. 测试默认堆栈跟踪配置（只有Error和Exception级别有堆栈）
+            LogTestMessage("演示默认配置: 只有Error/Exception级别应该有堆栈跟踪");
+            EZLogger.EZLog.Log?.Log("堆栈演示", "Log级别消息（无堆栈跟踪）");
+            EZLogger.EZLog.Warning?.Log("堆栈演示", "Warning级别消息（无堆栈跟踪）");
+            EZLogger.EZLog.Error?.Log("堆栈演示", "Error级别消息（有堆栈跟踪）");
+            EZLogger.EZLog.Exception?.Log("堆栈演示", "Exception级别消息（有堆栈跟踪）");
+
+            // 2. 测试调用链堆栈跟踪
+            LogTestMessage("演示调用链堆栈跟踪");
+            TestCallChainLevel1();
+
+            // 3. 测试文件日志中的堆栈跟踪
+            LogTestMessage("演示文件日志堆栈跟踪（查看日志文件以验证格式）");
+            EZLogger.EZLog.Error?.Log("文件堆栈测试", "此错误消息的堆栈跟踪应该同时出现在Unity控制台和日志文件中");
+
+            LogTestMessage("--- 堆栈跟踪演示完成 ---");
+            LogTestMessage("💡 提示: 点击'Open Log File'按钮查看文件中的堆栈跟踪格式");
+        }
+
+        /// <summary>
+        /// 测试调用链堆栈跟踪 - 第1层
+        /// </summary>
+        private void TestCallChainLevel1()
+        {
+            TestCallChainLevel2();
+        }
+
+        /// <summary>
+        /// 测试调用链堆栈跟踪 - 第2层
+        /// </summary>
+        private void TestCallChainLevel2()
+        {
+            TestCallChainLevel3();
+        }
+
+        /// <summary>
+        /// 测试调用链堆栈跟踪 - 第3层
+        /// </summary>
+        private void TestCallChainLevel3()
+        {
+            // 这里应该能看到完整的调用链：Level3 -> Level2 -> Level1 -> TestStackTraceFeatures
+            EZLogger.EZLog.Error?.Log("调用链测试", $"深层调用错误 #{_testCounter}（应显示完整调用链）");
+        }
+
+        /// <summary>
+        /// 堆栈跟踪性能基准测试（独立测试）
+        /// </summary>
+        private void RunStackTracePerformanceTest()
+        {
+            LogTestMessage("=== 堆栈跟踪性能基准测试开始 ===");
+
+            const int testCount = 1000; // 更大的测试数量用于准确的性能测试
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            // 保存当前级别设置
+            var originalLevels = EZLogger.EZLog.GetEnabledLevels();
+            LogTestMessage($"当前日志级别: {originalLevels}");
+
+            // 1. 测试完全禁用时的性能（应该接近零开销）
+            LogTestMessage($"开始测试禁用状态性能 ({testCount} 次调用)...");
+            EZLogger.EZLog.DisableAll();
+            stopwatch.Restart();
+
+            for (int i = 0; i < testCount; i++)
+            {
+                EZLogger.EZLog.Error?.Log("性能测试", $"禁用的错误日志 {i}");
+            }
+
+            stopwatch.Stop();
+            long disabledTime = stopwatch.ElapsedTicks;
+            LogTestMessage($"禁用状态耗时: {disabledTime} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+
+            // 2. 测试启用Error级别的性能（有堆栈跟踪）
+            LogTestMessage($"开始测试Error级别启用性能 ({testCount} 次调用)...");
+            EZLogger.EZLog.SetErrorAndAbove(); // 只启用Error和Exception
+            stopwatch.Restart();
+
+            for (int i = 0; i < testCount; i++)
+            {
+                EZLogger.EZLog.Error?.Log("性能测试", $"启用的错误日志 {i}");
+            }
+
+            stopwatch.Stop();
+            long enabledErrorTime = stopwatch.ElapsedTicks;
+            LogTestMessage($"Error级别启用耗时: {enabledErrorTime} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+
+            // 3. 测试启用Log级别的性能（无堆栈跟踪）
+            LogTestMessage($"开始测试Log级别启用性能 ({testCount} 次调用)...");
+            EZLogger.EZLog.EnableAll();
+            stopwatch.Restart();
+
+            for (int i = 0; i < testCount; i++)
+            {
+                EZLogger.EZLog.Log?.Log("性能测试", $"启用的普通日志 {i}");
+            }
+
+            stopwatch.Stop();
+            long enabledLogTime = stopwatch.ElapsedTicks;
+            LogTestMessage($"Log级别启用耗时: {enabledLogTime} ticks ({stopwatch.ElapsedMilliseconds} ms)");
+
+            // 恢复原始级别设置
+            EZLogger.EZLog.SetEnabledLevels(originalLevels);
+            LogTestMessage($"已恢复原始日志级别: {originalLevels}");
+
+            // 输出性能分析结果
+            LogTestMessage("--- 性能分析结果 ---");
+            LogTestMessage($"测试次数: {testCount}");
+            LogTestMessage($"禁用状态: {disabledTime} ticks");
+            LogTestMessage($"Log级别(无堆栈): {enabledLogTime} ticks");
+            LogTestMessage($"Error级别(有堆栈): {enabledErrorTime} ticks");
+
+            // 计算性能比率
+            if (disabledTime < enabledLogTime)
+            {
+                float ratio = enabledLogTime / (float)disabledTime;
+                LogTestMessage($"✅ 零开销验证通过: 禁用比Log级别快 {ratio:F1}x");
+            }
+            else
+            {
+                LogTestMessage("⚠️ 零开销验证失败: 禁用时应该比启用时更快");
+            }
+
+            if (enabledLogTime < enabledErrorTime)
+            {
+                float stackTraceOverhead = enabledErrorTime / (float)enabledLogTime;
+                LogTestMessage($"📊 堆栈跟踪开销: Error级别比Log级别慢 {stackTraceOverhead:F1}x");
+            }
+
+            LogTestMessage("=== 堆栈跟踪性能基准测试完成 ===");
         }
 
         /// <summary>

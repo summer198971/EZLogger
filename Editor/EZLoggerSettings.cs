@@ -17,9 +17,6 @@ namespace EZLogger.Editor
         [Tooltip("启用堆栈跟踪")]
         public bool enableStackTrace = true;
 
-        [Tooltip("堆栈跟踪的最小级别")]
-        public LogLevel stackTraceMinLevel = LogLevel.Warning;
-
         [Tooltip("最大堆栈跟踪深度")]
         [Range(1, 50)]
         public int maxStackTraceDepth = 10;
@@ -124,7 +121,7 @@ namespace EZLogger.Editor
             {
                 GlobalEnabledLevels = globalEnabledLevels,
                 EnableStackTrace = enableStackTrace,
-                StackTraceMinLevel = stackTraceMinLevel,
+                StackTraceMinLevel = LogLevel.ErrorAndAbove, // 固定为Error和Exception级别
                 MaxStackTraceDepth = maxStackTraceDepth,
                 MaxQueueSize = maxQueueSize,
                 BufferSize = bufferSize
@@ -177,7 +174,7 @@ namespace EZLogger.Editor
         {
             globalEnabledLevels = config.GlobalEnabledLevels;
             enableStackTrace = config.EnableStackTrace;
-            stackTraceMinLevel = config.StackTraceMinLevel;
+            // stackTraceMinLevel 已移除，固定使用 ErrorAndAbove
             maxStackTraceDepth = config.MaxStackTraceDepth;
             maxQueueSize = config.MaxQueueSize;
             bufferSize = config.BufferSize;

@@ -494,16 +494,29 @@ namespace EZLogger
 
         private void OnSystemLogReceived(string condition, string stackTrace, LogLevel logLevel)
         {
-            // 构建系统错误消息
-            var message = string.IsNullOrEmpty(stackTrace) ? condition : $"{condition}\n{stackTrace}";
+            // 🎯 系统错误处理：区分系统堆栈和手动调用堆栈
+            LogMessage logMessage;
+
+            if (!string.IsNullOrEmpty(stackTrace))
+            {
+                // 系统提供了堆栈跟踪，直接使用系统堆栈
+                logMessage = LogMessage.CreateWithSystemStackTrace(logLevel, "System", condition, stackTrace);
+            }
+            else
+            {
+                // 系统没有提供堆栈跟踪，使用普通日志消息
+                logMessage = new LogMessage(logLevel, "System", condition, _configuration, _configuration?.Timezone);
+            }
 
             // 记录系统日志
-            Log(logLevel, "System", message);
+            Log(logMessage);
 
             // 如果启用服务器上报且是错误或异常，则上报
-            if (_serverReportingEnabled && (logLevel == LogLevel.Error || logLevel == LogLevel.Exception))
+            if (_serverReportingEnabled && StackTraceHelper.IsErrorLevel(logLevel))
             {
-                ReportToServer(message, logLevel, "System");
+                // 构建完整的消息（包含堆栈跟踪）
+                var fullMessage = string.IsNullOrEmpty(stackTrace) ? condition : $"{condition}\n{stackTrace}";
+                ReportToServer(fullMessage, logLevel, "System");
             }
         }
 
@@ -644,14 +657,15 @@ namespace EZLogger
         }
 
         /// <summary>
-        /// 记录日志（简化版本）
+        /// 记录日志（简化版本）- 支持智能堆栈跟踪
         /// </summary>
         public void Log(LogLevel level, string tag, string message)
         {
             if (!IsLevelEnabled(level))
                 return;
 
-            var logMessage = new LogMessage(level, tag, message, null, GetCurrentFrameCount(), _configuration?.Timezone);
+            // 使用新的智能堆栈跟踪构造函数
+            var logMessage = new LogMessage(level, tag, message, _configuration, _configuration?.Timezone);
             Log(logMessage);
         }
 

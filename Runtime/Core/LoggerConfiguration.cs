@@ -88,8 +88,8 @@ namespace EZLogger
         /// <summary>是否启用堆栈跟踪</summary>
         public bool EnableStackTrace = true;
 
-        /// <summary>堆栈跟踪的最小级别</summary>
-        public LogLevel StackTraceMinLevel = LogLevel.Warning;
+        /// <summary>堆栈跟踪的最小级别（默认只开启Error级别，包含Error和Exception）</summary>
+        public LogLevel StackTraceMinLevel = LogLevel.ErrorAndAbove;
 
         /// <summary>最大堆栈跟踪深度</summary>
         public int MaxStackTraceDepth = 10;
@@ -150,7 +150,8 @@ namespace EZLogger
             return new LoggerConfiguration
             {
                 GlobalEnabledLevels = LogLevel.All,
-                EnableStackTrace = true
+                EnableStackTrace = true,
+                StackTraceMinLevel = LogLevel.ErrorAndAbove
             };
         }
 
