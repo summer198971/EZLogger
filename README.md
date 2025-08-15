@@ -302,8 +302,6 @@ public class GameDebugController : MonoBehaviour
 var config = LoggerConfiguration.CreateDefault();
 config.FileOutput.Enabled = true;
 config.FileOutput.LogDirectory = "GameLogs";
-config.FileOutput.MaxFileSize = 5 * 1024 * 1024; // 5MB
-config.FileOutput.EnableSizeCheck = true;
 
 EZLoggerManager.Instance.Configuration = config;
 ```

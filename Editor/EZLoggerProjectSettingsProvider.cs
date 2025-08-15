@@ -88,8 +88,8 @@ namespace EZLogger.Editor
         {
             EditorGUILayout.LabelField("📋 功能实现状态", EditorStyles.boldLabel);
 
-            EditorGUILayout.HelpBox("✅ 已实现 (60%): 基础日志、零开销API、Unity控制台、基础文件输出、基础服务器上报、系统监控\n" +
-                                   "⚠️ 待实现 (40%): 自动堆栈跟踪、文件轮转管理、完整服务器配置、性能信息收集、扩展配置",
+            EditorGUILayout.HelpBox("✅ 已实现 (70%): 基础日志、零开销API、Unity控制台、文件输出(日期轮转)、基础服务器上报、系统监控、时区配置\n" +
+                                   "⚠️ 待实现 (30%): 自动堆栈跟踪、完整服务器配置、性能信息收集、扩展配置",
                                    MessageType.Info);
         }
 
@@ -201,26 +201,17 @@ namespace EZLogger.Editor
                 EditorGUILayout.PropertyField(serializedSettings.FindProperty("logDirectory"), new GUIContent("日志目录"));
                 EditorGUILayout.PropertyField(serializedSettings.FindProperty("fileNameTemplate"), new GUIContent("文件名模板"));
 
-                // 文件大小管理 - 部分实现
-                EditorGUILayout.Space(3);
-                EditorGUILayout.HelpBox("⚠️ 以下功能部分实现", MessageType.Warning);
-                var oldEnabled = GUI.enabled;
-                GUI.enabled = false;
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("maxFileSizeMB"), new GUIContent("最大文件大小(MB) (部分实现)"));
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("keepSizeMB"), new GUIContent("保留大小(MB) (未实现)"));
-                GUI.enabled = oldEnabled;
+                // 日期轮转配置
+                EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableDailyRotation"), new GUIContent("按日期分文件"));
 
-                EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableSizeCheck"), new GUIContent("启用大小检查"));
-
-                if (settings.enableSizeCheck)
+                if (settings.enableDailyRotation)
                 {
-                    EditorGUI.indentLevel++;
-                    EditorGUILayout.PropertyField(serializedSettings.FindProperty("sizeCheckInterval"), new GUIContent("检查间隔(秒)"));
-                    EditorGUI.indentLevel--;
+                    EditorGUILayout.Space(3);
+                    EditorGUILayout.HelpBox("💡 日期轮转说明:\n• 每天自动创建一个新的日志文件\n• 文件名基于当前时区的日期\n• 无需手动管理文件大小", MessageType.Info);
                 }
 
                 // 文件压缩 - 未实现
-                oldEnabled = GUI.enabled;
+                var oldEnabled = GUI.enabled;
                 GUI.enabled = false;
                 EditorGUILayout.PropertyField(serializedSettings.FindProperty("enableFileCompression"), new GUIContent("启用文件压缩 (未实现)"));
                 GUI.enabled = oldEnabled;

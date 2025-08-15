@@ -12,7 +12,7 @@ namespace EZLogger
     public class TimezoneConfig
     {
         /// <summary>是否使用UTC时间（默认true）</summary>
-        public bool UseUtc = true;
+        public bool UseUtc = false;
 
         /// <summary>UTC偏移小时数（当UseUtc=false时使用，范围-12到+14）</summary>
         public int UtcOffsetHours = 0;
@@ -176,17 +176,8 @@ namespace EZLogger
         /// <summary>日志文件名模板</summary>
         public string FileNameTemplate = "log_{0:yyyyMMdd}.txt";
 
-        /// <summary>最大文件大小（字节）</summary>
-        public long MaxFileSize = 10 * 1024 * 1024; // 10MB
-
-        /// <summary>文件轮转时保留的大小</summary>
-        public long KeepSize = 5 * 1024 * 1024; // 5MB
-
-        /// <summary>是否启用文件大小检查</summary>
-        public bool EnableSizeCheck = true;
-
-        /// <summary>文件大小检查间隔（秒）</summary>
-        public int SizeCheckInterval = 60;
+        /// <summary>是否按日期分割文件（默认：一天一个文件）</summary>
+        public bool EnableDailyRotation = true;
 
         /// <summary>是否启用文件压缩</summary>
         public bool EnableCompression = false;

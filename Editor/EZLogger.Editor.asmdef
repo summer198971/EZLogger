@@ -2,9 +2,7 @@
     "name": "EZLogger.Editor",
     "rootNamespace": "EZLogger.Editor",
     "references": [
-        "EZLogger.Runtime",
-        "Unity.Settings.Editor",
-        "UnityEngine.IMGUIModule"
+        "EZLogger.Runtime"
     ],
     "includePlatforms": [
         "Editor"

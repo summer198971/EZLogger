@@ -214,7 +214,7 @@ namespace EZLogger
 
                 if (_configuration.FileOutput.Enabled)
                 {
-                    var fileAppender = new FileAppender();
+                    var fileAppender = new FileAppender(_configuration.Timezone);
                     fileAppender.Initialize(_configuration.FileOutput, _configuration.Timezone);
                     AddAppender(fileAppender);
                 }
@@ -310,7 +310,7 @@ namespace EZLogger
                     // 需要创建新的文件输出器
                     try
                     {
-                        var fileAppender = new FileAppender();
+                        var fileAppender = new FileAppender(_configuration.Timezone);
                         fileAppender.Initialize(_configuration.FileOutput, _configuration.Timezone);
                         AddAppender(fileAppender);
                     }
@@ -1068,7 +1068,7 @@ namespace EZLogger
             catch (Exception ex)
             {
                 Debug.LogError($"[EZLogger] 打开日志文件夹失败: {ex.Message}");
-                
+
                 // 在WebGL平台提供备用方案
 #if UNITY_WEBGL && !UNITY_EDITOR
                 Debug.Log("[EZLogger] 尝试使用备用方案...");
@@ -1130,31 +1130,31 @@ namespace EZLogger
                     System.Diagnostics.Process.Start("explorer.exe", $"\"{folderPath}\"");
                     Debug.Log($"[EZLogger] Windows运行时打开: {folderPath}");
                     break;
-                    
+
                 case RuntimePlatform.OSXPlayer:
                     // macOS运行时
                     System.Diagnostics.Process.Start("open", $"\"{folderPath}\"");
                     Debug.Log($"[EZLogger] macOS运行时打开: {folderPath}");
                     break;
-                    
+
                 case RuntimePlatform.LinuxPlayer:
                     // Linux运行时
                     System.Diagnostics.Process.Start("xdg-open", $"\"{folderPath}\"");
                     Debug.Log($"[EZLogger] Linux运行时打开: {folderPath}");
                     break;
-                    
+
                 case RuntimePlatform.Android:
                     // Android平台
                     Debug.LogWarning("[EZLogger] Android平台无法直接打开文件夹，日志路径: " + folderPath);
                     Debug.Log("[EZLogger] 建议使用adb命令或设备文件管理器查看日志文件");
                     break;
-                    
+
                 case RuntimePlatform.IPhonePlayer:
                     // iOS平台
                     Debug.LogWarning("[EZLogger] iOS平台无法直接打开文件夹，日志路径: " + folderPath);
                     Debug.Log("[EZLogger] 日志文件位于应用沙盒中，可通过iTunes或Xcode查看");
                     break;
-                    
+
                 default:
                     // 通用方案
                     try
@@ -1213,10 +1213,10 @@ namespace EZLogger
 #endif
                 case RuntimePlatform.Android:
                     return "Android平台:\n• 日志存储在应用私有目录\n• 需要root权限或adb工具访问\n• 路径: " + _configuration.GetLogFolderPath();
-                    
+
                 case RuntimePlatform.IPhonePlayer:
                     return "iOS平台:\n• 日志存储在应用沙盒中\n• 可通过iTunes文件共享或Xcode访问\n• 路径: " + _configuration.GetLogFolderPath();
-                    
+
                 default:
                     return "桌面平台:\n• 可直接通过文件管理器访问\n• 路径: " + _configuration.GetLogFolderPath();
             }

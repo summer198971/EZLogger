@@ -207,10 +207,7 @@ namespace EZLogger
         public bool fileOutputEnabled = true;
         public string logDirectory = "Logs";
         public string fileNameTemplate = "log_{0:yyyyMMdd}.txt";
-        public float maxFileSizeMB = 10f;
-        public float keepSizeMB = 5f;
-        public bool enableSizeCheck = true;
-        public int sizeCheckInterval = 60;
+        public bool enableDailyRotation = true;
         public bool enableFileCompression = false;
 
         // 服务器上报配置
@@ -231,7 +228,7 @@ namespace EZLogger
         public bool collectPerformanceInfo = false;
 
         // 时区配置
-        public bool useUtcTime = true;
+        public bool useUtcTime = false;
         public int utcOffsetHours = 0;
 
         /// <summary>
@@ -264,10 +261,7 @@ namespace EZLogger
                 Enabled = fileOutputEnabled,
                 LogDirectory = logDirectory,
                 FileNameTemplate = fileNameTemplate,
-                MaxFileSize = (long)(maxFileSizeMB * 1024 * 1024),
-                KeepSize = (long)(keepSizeMB * 1024 * 1024),
-                EnableSizeCheck = enableSizeCheck,
-                SizeCheckInterval = sizeCheckInterval,
+                EnableDailyRotation = enableDailyRotation,
                 EnableCompression = enableFileCompression
             };
 
@@ -322,10 +316,7 @@ namespace EZLogger
                 serializable.fileOutputEnabled = config.FileOutput.Enabled;
                 serializable.logDirectory = config.FileOutput.LogDirectory;
                 serializable.fileNameTemplate = config.FileOutput.FileNameTemplate;
-                serializable.maxFileSizeMB = config.FileOutput.MaxFileSize / (1024f * 1024f);
-                serializable.keepSizeMB = config.FileOutput.KeepSize / (1024f * 1024f);
-                serializable.enableSizeCheck = config.FileOutput.EnableSizeCheck;
-                serializable.sizeCheckInterval = config.FileOutput.SizeCheckInterval;
+                serializable.enableDailyRotation = config.FileOutput.EnableDailyRotation;
                 serializable.enableFileCompression = config.FileOutput.EnableCompression;
             }
 

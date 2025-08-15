@@ -61,20 +61,8 @@ namespace EZLogger.Editor
         [Tooltip("日志文件名模板")]
         public string fileNameTemplate = "log_{0:yyyyMMdd}.txt";
 
-        [Tooltip("最大文件大小（MB）")]
-        [Range(1, 100)]
-        public float maxFileSizeMB = 10f;
-
-        [Tooltip("文件轮转时保留的大小（MB）")]
-        [Range(1, 50)]
-        public float keepSizeMB = 5f;
-
-        [Tooltip("启用文件大小检查")]
-        public bool enableSizeCheck = true;
-
-        [Tooltip("文件大小检查间隔（秒）")]
-        [Range(10, 600)]
-        public int sizeCheckInterval = 60;
+        [Tooltip("是否按日期分割文件（默认：一天一个文件）")]
+        public bool enableDailyRotation = true;
 
         [Tooltip("启用文件压缩")]
         public bool enableFileCompression = false;
@@ -157,10 +145,7 @@ namespace EZLogger.Editor
                 Enabled = fileOutputEnabled,
                 LogDirectory = logDirectory,
                 FileNameTemplate = fileNameTemplate,
-                MaxFileSize = (long)(maxFileSizeMB * 1024 * 1024),
-                KeepSize = (long)(keepSizeMB * 1024 * 1024),
-                EnableSizeCheck = enableSizeCheck,
-                SizeCheckInterval = sizeCheckInterval,
+                EnableDailyRotation = enableDailyRotation,
                 EnableCompression = enableFileCompression
             };
 
@@ -212,10 +197,7 @@ namespace EZLogger.Editor
                 fileOutputEnabled = config.FileOutput.Enabled;
                 logDirectory = config.FileOutput.LogDirectory;
                 fileNameTemplate = config.FileOutput.FileNameTemplate;
-                maxFileSizeMB = config.FileOutput.MaxFileSize / (1024f * 1024f);
-                keepSizeMB = config.FileOutput.KeepSize / (1024f * 1024f);
-                enableSizeCheck = config.FileOutput.EnableSizeCheck;
-                sizeCheckInterval = config.FileOutput.SizeCheckInterval;
+                enableDailyRotation = config.FileOutput.EnableDailyRotation;
                 enableFileCompression = config.FileOutput.EnableCompression;
             }
 

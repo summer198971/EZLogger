@@ -60,6 +60,7 @@ namespace EZLoggerSamples
         private bool _isPanelVisible = true;
         private Dictionary<string, Toggle> _levelToggles = new Dictionary<string, Toggle>();
         private Dictionary<string, Toggle> _featureToggles = new Dictionary<string, Toggle>();
+        private Dictionary<string, Toggle> _toggles = new Dictionary<string, Toggle>();
         private Dictionary<string, InputField> _inputFields = new Dictionary<string, InputField>();
         private Dictionary<string, Text> _statusTexts = new Dictionary<string, Text>();
 
@@ -323,8 +324,8 @@ namespace EZLoggerSamples
             if (testLogButton != null)
                 testLogButton.onClick.AddListener(RunLogTests);
 
-            if (clearConsoleButton != null)
-                clearConsoleButton.onClick.AddListener(ClearConsole);
+            // if (clearConsoleButton != null)
+            //     clearConsoleButton.onClick.AddListener(ClearConsole);
 
             // 查找或创建控件
             FindOrCreateControls();
@@ -405,9 +406,9 @@ namespace EZLoggerSamples
             testLogButton.onClick.AddListener(RunLogTests);
 
             // 清除控制台按钮
-            var clearButtonGO = CreateButton("Clear Console", new Vector2(0.25f, 0.85f), new Vector2(0.4f, 0.9f));
-            clearConsoleButton = clearButtonGO.GetComponent<Button>();
-            clearConsoleButton.onClick.AddListener(ClearConsole);
+            // var clearButtonGO = CreateButton("Clear Console", new Vector2(0.25f, 0.85f), new Vector2(0.4f, 0.9f));
+            // clearConsoleButton = clearButtonGO.GetComponent<Button>();
+            // clearConsoleButton.onClick.AddListener(ClearConsole);
 
             // 打开日志文件按钮
             var openLogFileButtonGO = CreateButton("Open Log File", new Vector2(0.45f, 0.85f), new Vector2(0.6f, 0.9f));
@@ -687,11 +688,11 @@ namespace EZLoggerSamples
             logDirField.onEndEdit.AddListener(dir => OnLogDirectoryChanged(dir));
             _inputFields["log_dir"] = logDirField;
 
-            // 最大文件大小配置
-            var maxSizeField = CreateInputField("max_size", "最大文件大小(MB):",
-                (_runtimeConfig.FileOutput.MaxFileSize / (1024 * 1024)).ToString(), "10");
-            maxSizeField.onEndEdit.AddListener(size => OnMaxFileSizeChanged(size));
-            _inputFields["max_size"] = maxSizeField;
+            // 日期轮转配置
+            var dailyRotationToggle = CreateToggle("daily_rotation", "按日期分文件:",
+                _runtimeConfig.FileOutput.EnableDailyRotation);
+            dailyRotationToggle.onValueChanged.AddListener(enabled => OnDailyRotationChanged(enabled));
+            _toggles["daily_rotation"] = dailyRotationToggle;
 
             // 时区偏移配置
             var timezoneField = CreateInputField("timezone", "UTC时区偏移:",
@@ -1137,20 +1138,13 @@ namespace EZLoggerSamples
         }
 
         /// <summary>
-        /// 最大文件大小变更事件
+        /// 日期轮转设置变更事件
         /// </summary>
-        private void OnMaxFileSizeChanged(string sizeText)
+        private void OnDailyRotationChanged(bool enabled)
         {
-            if (float.TryParse(sizeText, out float sizeMB) && sizeMB > 0)
-            {
-                _runtimeConfig.FileOutput.MaxFileSize = (long)(sizeMB * 1024 * 1024);
-                _loggerManager.RefreshConfiguration();
-                LogTestMessage($"最大文件大小已设置为: {sizeMB}MB");
-            }
-            else
-            {
-                LogTestMessage($"无效的文件大小: {sizeText}");
-            }
+            _runtimeConfig.FileOutput.EnableDailyRotation = enabled;
+            _loggerManager.RefreshConfiguration();
+            LogTestMessage($"日期轮转已{(enabled ? "启用" : "禁用")}");
         }
 
         /// <summary>
@@ -1279,8 +1273,8 @@ namespace EZLoggerSamples
             if (_inputFields.TryGetValue("log_dir", out var dirField))
                 dirField.text = _runtimeConfig.FileOutput.LogDirectory;
 
-            if (_inputFields.TryGetValue("max_size", out var sizeField))
-                sizeField.text = (_runtimeConfig.FileOutput.MaxFileSize / (1024 * 1024)).ToString();
+            if (_toggles.TryGetValue("daily_rotation", out var rotationToggle))
+                rotationToggle.isOn = _runtimeConfig.FileOutput.EnableDailyRotation;
 
             if (_inputFields.TryGetValue("timezone", out var tzField))
                 tzField.text = _runtimeConfig.Timezone.UtcOffsetHours.ToString();

@@ -27,9 +27,8 @@ namespace EZLogger.Appenders
         private volatile bool _isWriteThreadRunning;
         private readonly System.Collections.Generic.Queue<LogMessage> _messageQueue = new System.Collections.Generic.Queue<LogMessage>();
 
-        // 文件大小检查相关
-        private Timer? _sizeCheckTimer;
-        private readonly object _sizeCheckLock = new object();
+        // 文件日期（在实例化时确定，不再变更）
+        private readonly DateTime _fileDate;
 
         // 字符串构建缓存 - 每个FileAppender实例独享，线程安全由WriteThread保证
         private readonly StringBuilder _stringBuilder = new StringBuilder(512);
@@ -45,6 +44,24 @@ namespace EZLogger.Appenders
         public override bool RequiresUpdate => !PlatformCapabilities.SupportsThreading;
 
         /// <summary>
+        /// 构造函数 - 在实例化时确定文件日期
+        /// </summary>
+        public FileAppender()
+        {
+            // 使用默认时区配置确定文件日期
+            var defaultTimezone = new TimezoneConfig();
+            _fileDate = defaultTimezone.GetCurrentTime().Date;
+        }
+
+        /// <summary>
+        /// 构造函数 - 使用指定时区配置确定文件日期
+        /// </summary>
+        public FileAppender(TimezoneConfig timezoneConfig)
+        {
+            _fileDate = timezoneConfig.GetCurrentTime().Date;
+        }
+
+        /// <summary>
         /// 核心初始化逻辑
         /// </summary>
         protected override void InitializeCore(object config)
@@ -53,14 +70,13 @@ namespace EZLogger.Appenders
 
             if (_config.Enabled)
             {
-                Debug.Log($"[EZLogger] 初始化文件输出器: {_config.LogDirectory}");
+                Debug.Log($"[EZLogger] 初始化文件输出器: {_config.LogDirectory}, 文件日期: {_fileDate:yyyy-MM-dd}");
                 OpenLogFile();
 
                 if (PlatformCapabilities.SupportsThreading)
                 {
                     // 多线程平台：使用原有逻辑
                     StartWriteThread();
-                    StartSizeCheckTimer();
                 }
                 else
                 {
@@ -101,8 +117,6 @@ namespace EZLogger.Appenders
                 EnqueueForWebGL(message);
             }
         }
-
-
 
         /// <summary>
         /// 启动写入线程
@@ -280,102 +294,9 @@ namespace EZLogger.Appenders
             return logDir;
         }
 
-        /// <summary>
-        /// 启动文件大小检查定时器
-        /// </summary>
-        private void StartSizeCheckTimer()
-        {
-            if (_config?.EnableSizeCheck != true || _config.SizeCheckInterval <= 0)
-                return;
 
-            _sizeCheckTimer = new Timer(CheckFileSize, null,
-                TimeSpan.FromSeconds(_config.SizeCheckInterval),
-                TimeSpan.FromSeconds(_config.SizeCheckInterval));
-        }
 
-        /// <summary>
-        /// 检查文件大小
-        /// </summary>
-        private void CheckFileSize(object? state)
-        {
-            if (_config?.EnableSizeCheck != true)
-                return;
 
-            lock (_sizeCheckLock)
-            {
-                try
-                {
-                    if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
-                        return;
-
-                    var fileInfo = new FileInfo(_currentFilePath);
-                    long fileSizeBytes = fileInfo.Length;
-                    long maxSizeBytes = (long)(_config?.MaxFileSize ?? 0);
-
-                    if (fileSizeBytes > maxSizeBytes)
-                    {
-                        TrimLogFile(fileInfo);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    HandleInternalError(ex);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 裁剪日志文件
-        /// </summary>
-        private void TrimLogFile(FileInfo fileInfo)
-        {
-            try
-            {
-                lock (_fileLock)
-                {
-                    // 关闭当前流
-                    _streamWriter?.Close();
-                    _streamWriter?.Dispose();
-                    _fileStream?.Close();
-                    _fileStream?.Dispose();
-
-                    // 读取文件后半部分内容
-                    byte[] fileBytes = File.ReadAllBytes(fileInfo.FullName);
-                    long keepBytes = (long)(_config?.KeepSize ?? 0);
-                    long trimSize = fileBytes.Length - keepBytes;
-
-                    if (keepBytes > 0 && keepBytes < fileBytes.Length)
-                    {
-                        byte[] keepData = new byte[keepBytes];
-                        Array.Copy(fileBytes, trimSize, keepData, 0, keepBytes);
-
-                        // 重写文件
-                        File.WriteAllBytes(fileInfo.FullName, keepData);
-
-                        // 重新打开文件
-                        _fileStream = new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-                        _streamWriter = new StreamWriter(_fileStream, Encoding.UTF8);
-
-                        // 记录裁剪操作
-                        _streamWriter.WriteLine(BuildTrimMessage(trimSize));
-                        _streamWriter.Flush();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                HandleInternalError(ex);
-                // 尝试重新打开文件
-                try
-                {
-                    OpenLogFile();
-                }
-                catch
-                {
-                    // 忽略重新打开失败
-                }
-            }
-        }
 
         /// <summary>
         /// 获取配置的时间
@@ -437,9 +358,7 @@ namespace EZLogger.Appenders
 
         protected override void DisposeCore()
         {
-            // 停止大小检查定时器
-            _sizeCheckTimer?.Dispose();
-            _sizeCheckTimer = null;
+            // 日期轮转无需特殊清理
 
             // 停止写入线程
             _isWriteThreadRunning = false;
@@ -483,24 +402,24 @@ namespace EZLogger.Appenders
         {
             var sb = new StringBuilder(32); // 临时StringBuilder，局部作用域
             var template = _config?.FileNameTemplate ?? "log_{0:yyyyMMdd}.txt";
-            var currentTime = GetConfiguredTime();
+            // 使用实例化时确定的文件日期，而不是动态获取时间
 
             // 解析文件名模板 - 替换{0:yyyyMMdd}格式
             if (template.Contains("{0:yyyyMMdd}"))
             {
                 sb.Append("log_");
                 // 手动格式化日期避免ToString分配
-                var year = currentTime.Year;
+                var year = _fileDate.Year;
                 sb.Append((char)('0' + year / 1000));
                 sb.Append((char)('0' + (year / 100) % 10));
                 sb.Append((char)('0' + (year / 10) % 10));
                 sb.Append((char)('0' + year % 10));
 
-                var month = currentTime.Month;
+                var month = _fileDate.Month;
                 if (month < 10) sb.Append('0');
                 sb.Append(month);
 
-                var day = currentTime.Day;
+                var day = _fileDate.Day;
                 if (day < 10) sb.Append('0');
                 sb.Append(day);
 
@@ -543,39 +462,6 @@ namespace EZLogger.Appenders
             sb.Append(ms);
 
             sb.Append(" [Log] [FileAppender] Log started");
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// 构建文件裁剪消息 - 零GC实现
-        /// </summary>
-        private string BuildTrimMessage(long trimSize)
-        {
-            var sb = new StringBuilder(128);
-            var trimTime = GetConfiguredTime();
-            sb.Append(_config.LogEntryPrefix);
-
-            // 时间格式 HH:mm:ss:fff
-            if (trimTime.Hour < 10) sb.Append('0');
-            sb.Append(trimTime.Hour);
-            sb.Append(':');
-
-            if (trimTime.Minute < 10) sb.Append('0');
-            sb.Append(trimTime.Minute);
-            sb.Append(':');
-
-            if (trimTime.Second < 10) sb.Append('0');
-            sb.Append(trimTime.Second);
-            sb.Append(':');
-
-            var ms = trimTime.Millisecond;
-            if (ms < 100) sb.Append('0');
-            if (ms < 10) sb.Append('0');
-            sb.Append(ms);
-
-            sb.Append(" [INFO] [FileAppender] File trimmed, removed ");
-            sb.Append(trimSize);
-            sb.Append(" bytes");
             return sb.ToString();
         }
 

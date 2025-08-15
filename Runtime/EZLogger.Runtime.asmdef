@@ -1,7 +1,10 @@
 {
     "name": "EZLogger.Runtime",
     "rootNamespace": "EZLogger",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
