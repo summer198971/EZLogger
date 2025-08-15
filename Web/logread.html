@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>游戏日志分析工具</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    .container {
+      width: 100%;
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      margin: 10px 20px;
+    }
+    .log-viewer {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 0;
+      resize: vertical;
+      min-height: 200px;
+      position: relative;
+      padding-left: 10px;  /* 移除定位按钮的空间 */
+    }
+    .filter-panel {
+      padding: 10px 20px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+    }
+    .filter-panel button {
+      padding: 5px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .filter-panel select {
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 3px;
+      border: 1px solid #ddd;
+    }
+    .filter-panel select:hover {
+      border-color: #2196F3;
+    }
+    .log-header {
+      margin-left: 30px;  /* 调整表头的左边距，与内容对齐 */
+      display: flex;
+      gap: 5px;
+      padding: 5px;
+      background: #f8f9fa;
+      border-bottom: 2px solid #dee2e6;
+      font-weight: bold;
+      font-family: monospace;
+      padding: 3px 5px;
+    }
+    .log-header span {
+      color: #495057;
+    }
+    .log-header .toggle-btn {
+      min-width: 40px;
+      text-align: center;
+    }
+    .log-header .log-index {
+      min-width: 50px;
+      text-align: right;
+      padding-right: 10px;
+    }
+    .log-header .log-timestamp {
+      min-width: 85px;
+    }
+    .log-header .log-frame {
+      min-width: 40px;
+      text-align: right;
+      padding-right: 10px;
+    }
+    .log-header .log-type {
+      min-width: 60px;
+    }
+    .log-header .log-category {
+      min-width: 150px;
+    }
+    .log-header .log-message {
+      flex: 1;
+    }
+    .log-item {
+      padding: 3px 5px;
+      border-bottom: 1px solid #eee;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: flex;
+      gap: 5px;
+      font-family: monospace;
+      box-sizing: border-box;
+      align-items: flex-start;
+      cursor: default;
+      position: relative;
+      /* 性能优化：避免重绘 */
+      contain: layout style paint;
+      /* 优化渲染层 */
+      backface-visibility: hidden;
+    }
+    /* 偶数行背景色 */
+    .log-item:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    /* 奇数行背景色 */
+    .log-item:nth-child(odd) {
+      background-color: #ffffff;
+    }
+    .log-item:hover {
+      background-color: #e3f2fd !important;
+    }
+    .log-timestamp {
+      color: #666;
+      min-width: 85px;
+    }
+    .log-type {
+      min-width: 60px;
+      font-weight: bold;
+    }
+    .log-type.Log {
+      color: #2196F3;
+    }
+    .log-type.Warning {
+      color: #FF9800;
+    }
+    .log-type.Error {
+      color: #F44336;
+    }
+    .log-category {
+      color: #4CAF50;
+      min-width: 150px;
+    }
+    .log-message {
+      flex: 1;
+      color: #333;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      position: relative;
+    }
+    .log-message.multiline {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+    }
+    /* JSON格式和多行内容的折叠状态 */
+    .log-message.multiline.collapsed {
+      overflow: hidden;
+      cursor: pointer;
+      max-width: 80%;
+      position: relative;
+    }
+    
+    /* 网络日志折叠时单行显示 */
+    .log-message.multiline.collapsed[data-network="true"] {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    
+    /* 普通多行内容折叠时限制行数 */
+    .log-message.multiline.collapsed[data-network="false"] {
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow: hidden;
+      line-height: 1.2;
+      max-height: 3.6em; /* 3行的高度 */
+      position: relative;
+    }
+    /* 删除旧的内联按钮样式 */
+    .log-message.multiline.collapsed[onclick]::before,
+    .log-message.multiline.expanded[onclick]::before,
+    .log-message.multiline.collapsed[onclick]::after,
+    .log-message.multiline.expanded[onclick]::after {
+      content: none;
+    }
+    /* 添加单独的展开/收起按钮样式 */
+    .toggle-btn {
+      min-width: 40px;
+      text-align: center;
+      cursor: pointer;
+      color: #2196F3;
+      font-size: 12px;
+      padding: 5px 0;
+      margin-right: 5px;
+      border-left: 1px solid #eee;
+      border-right: 1px solid #eee;
+      background-color: #f9f9f9;
+    }
+    .toggle-btn:hover {
+      background-color: #e3f2fd;
+    }
+    /* 确保展开状态的样式 */
+    .log-message.multiline.expanded {
+      height: auto;
+      max-height: none;
+      white-space: pre-wrap;
+      display: block; /* 修改为block以解决高亮内容的排版问题 */
+    }
+    /* 删除旧的右侧按钮样式 */
+    .log-message.multiline.collapsed[onclick]::after {
+      content: none;
+    }
+    .log-message.multiline.expanded[onclick]::after {
+      content: none;
+    }
+    /* 确保高亮文本不会破坏布局 */
+    .highlight {
+      background-color: #fff176;
+      border-radius: 2px;
+      padding: 0 2px;
+      margin: 0 -2px;
+      display: inline; /* 确保高亮内容保持内联 */
+    }
+    .module-filter-container {
+      display: inline-block;
+      position: relative;
+    }
+    .module-filter-container input {
+      padding: 5px 10px;
+      border-radius: 3px;
+      border: 1px solid #ddd;
+      width: 200px;
+    }
+    .module-filter-container input:focus {
+      border-color: #2196F3;
+      outline: none;
+    }
+    .module-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-top: none;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+    .module-suggestion-item {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .module-suggestion-item:hover {
+      background-color: #f5f5f5;
+    }
+    .module-suggestion-item.selected {
+      background-color: #e3f2fd;
+    }
+    .virtual-list {
+      position: absolute;
+      top: 0;
+      left: 10px;  /* 调整左边距 */
+      right: 0;
+      z-index: 1;
+      padding: 0 10px;
+      /* 性能优化：启用硬件加速 */
+      will-change: transform;
+      transform: translateZ(0);
+    }
+    .virtual-list-phantom {
+      position: absolute;
+      left: 10px;  /* 调整左边距 */
+      top: 0;
+      right: 0;
+      z-index: -1;
+    }
+    .info-panel {
+      padding: 0 20px;
+      background: #e3f2fd;
+      color: #1976d2;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+    }
+    .info-row {
+      padding: 5px 0;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      border-bottom: 1px solid rgba(25, 118, 210, 0.1);
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-panel span {
+      display: inline-flex;
+      align-items: center;
+    }
+    .basic-info {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .basic-info button {
+      padding: 4px 12px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 800px;
+      border-radius: 8px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #detailInfo {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    .session-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .session-selector select {
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid #1976d2;
+      background: white;
+      color: #1976d2;
+      cursor: pointer;
+    }
+    .session-selector select:disabled {
+      border-color: #ccc;
+      color: #999;
+      cursor: not-allowed;
+    }
+    .log-index {
+      min-width: 50px;
+      text-align: right;
+      padding-right: 10px;
+      color: #666;
+      padding-top: 5px;  /* 添加顶部内边距对齐 */
+    }
+    .session-info {
+      margin-left: 10px;
+      color: #1976d2;
+      font-size: 13px;
+      display: flex;
+      gap: 15px;
+    }
+    #exportBtn {
+      padding: 4px 12px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    #exportBtn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #logFile {
+      padding: 4px;
+      border: 1px solid #1976d2;
+      border-radius: 4px;
+      color: #1976d2;
+      cursor: pointer;
+    }
+    #logFile::-webkit-file-upload-button {
+      padding: 4px 12px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    #logFile:disabled {
+      border-color: #ccc;
+      color: #999;
+      cursor: not-allowed;
+    }
+    #logFile:disabled::-webkit-file-upload-button {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    /* 复选框样式 */
+    .filter-panel label {
+      cursor: pointer;
+      user-select: none;
+    }
+    .filter-panel label:hover {
+      color: #1976d2;
+    }
+    .filter-panel input[type="checkbox"] {
+      cursor: pointer;
+    }
+    .filter-panel input[type="checkbox"]:disabled {
+      cursor: not-allowed;
+    }
+    .filter-panel label:has(input[type="checkbox"]:disabled) {
+      color: #999;
+      cursor: not-allowed;
+    }
+    /* 添加聚焦样式 */
+    .log-item.focused {
+      background-color: #bbdefb !important;
+      border: 1px solid #2196F3;
+    }
+    .locate-btn {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>游戏日志分析工具</h1>
+    
+    <div class="info-panel">
+      <!-- 第一行：基本统计信息 -->
+      <div class="info-row">
+        <span>当前日志: <span id="totalLogs">0</span> 条</span>
+        <span>文件日志: <span id="fileLogs">--</span></span>
+        <span>文件大小: <span id="fileSize">0</span></span>
+        <span>网络日志: <span id="networkCount">0</span> 条</span>
+        <span>错误日志: <span id="errorCount">0</span> 条</span>
+        <div class="session-selector">
+          <select id="sessionSelect" onchange="switchSession()" disabled>
+            <option value="">选择登录会话...</option>
+          </select>
+          <span class="session-info">
+            <span id="sessionCount">共 0 次登录</span>
+            <span id="currentSession">当前: --</span>
+          </span>
+        </div>
+        <button id="downloadOriginal" style="display: none;" onclick="downloadOriginalFile()">下载原始文件</button>
+      </div>
+      <!-- 第二行：详细信息 -->
+      <div class="info-row basic-info">
+        <span>来源: <span id="source">--</span></span>
+        <span>会话账号ID: <span id="accountId">--</span></span>
+        <span>版本: <span id="version">--</span></span>
+        <span>提交时候登录ID: <span id="loginId">--</span></span>
+        <span>提交时间: <span id="logTime">--</span></span>
+        <span>平台: <span id="platform">--</span></span>
+        <span>语言: <span id="language">--</span></span>
+        <span>环境: <span id="isOnline">--</span></span>
+        <button id="showDetailBtn" onclick="showDetailInfo()">查看详细信息</button>
+      </div>
+    </div>
+
+    <div class="filter-panel">
+      <select id="typeFilter" onchange="filterLogs()" disabled>
+        <option value="All">网络&&普通</option>
+        <option value="Network">网络日志</option>
+        <option value="Normal">普通日志</option>
+      </select>
+      <select id="logLevel" onchange="filterLogs()" disabled>
+        <option value="All">All</option>
+        <option value="Log">Log</option>
+        <option value="Warning">Warning</option>
+        <option value="Error">Error</option>
+      </select>
+      <div class="module-filter-container">
+        <input type="text" 
+          id="moduleFilter" 
+          placeholder="输入模块名称筛选"
+          autocomplete="off"
+          disabled>
+        <div id="moduleSuggestions" class="module-suggestions"></div>
+      </div>
+      <input type="text" 
+        id="contentFilter" 
+        placeholder="搜索日志内容"
+        style="padding: 5px 10px; border-radius: 3px; border: 1px solid #ddd; width: 200px;"
+        disabled
+        autocomplete="off">
+      <label style="margin-left: 5px; display: inline-flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="showOnlyMatches" onchange="handleSearchOptionsChange()">
+        <span>仅显示搜索内容</span>
+      </label>
+      <label style="margin-left: 10px; display: inline-flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="expandAllByDefault" onchange="handleExpandAllChange()">
+        <span>默认全展开</span>
+      </label>
+      <button id="prevMatch" onclick="findPrevMatch()" disabled style="margin-left: 5px;">上一个</button>
+      <button id="nextMatch" onclick="findNextMatch()" disabled style="margin-left: 5px;">下一个</button>
+      <span id="matchInfo" style="margin-left: 10px; color: #666;"></span>
+      <input type="file" 
+        id="logFile" 
+        onchange="handleFileSelect(event)" 
+        accept=".txt"
+        title="选择日志文件">
+      <button id="exportBtn" onclick="exportLogs()" disabled>导出日志</button>
+    </div>
+
+    <div class="log-header">
+      <span class="log-index">#</span>
+      <span class="log-timestamp">时间</span>
+      <span class="log-frame">帧</span>
+      <span class="log-type">类型</span>
+      <span class="log-category">模块</span>
+      <span class="toggle-btn"></span>
+      <span class="log-message">日志内容</span>
+    </div>
+    <div class="log-viewer" id="logViewer">
+      <div class="virtual-list-phantom"></div>
+      <div class="virtual-list"></div>
+    </div>
+  </div>
+
+  <!-- 详细信息弹窗 -->
+  <div id="detailInfoModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>详细信息</h2>
+      <div id="detailInfo"></div>
+    </div>
+  </div>
+
+  <script>
+    // 添加版本号，每次发布时更新
+    const version = new Date().getTime();
+    
+    // 性能监控
+    let performanceStats = {
+      scrollEvents: 0,
+      renderCalls: 0,
+      lastScrollTime: 0,
+      scrollDuration: 0
+    };
+    
+    // 监控滚动性能
+    function monitorScrollPerformance() {
+      const logViewer = document.getElementById('logViewer');
+      if (!logViewer) return;
+      
+      let scrollStartTime = 0;
+      let isScrolling = false;
+      
+      logViewer.addEventListener('scroll', () => {
+        if (!isScrolling) {
+          scrollStartTime = performance.now();
+          isScrolling = true;
+        }
+        
+        performanceStats.scrollEvents++;
+        performanceStats.lastScrollTime = performance.now();
+        
+        // 检测滚动结束
+        clearTimeout(logViewer.scrollEndTimer);
+        logViewer.scrollEndTimer = setTimeout(() => {
+          isScrolling = false;
+          performanceStats.scrollDuration = performance.now() - scrollStartTime;
+          
+          // 在控制台输出性能统计（仅在开发模式）
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Scroll Performance:', {
+              duration: performanceStats.scrollDuration.toFixed(2) + 'ms',
+              events: performanceStats.scrollEvents,
+              avgEventTime: (performanceStats.scrollDuration / performanceStats.scrollEvents).toFixed(2) + 'ms'
+            });
+          }
+        }, 100);
+      });
+    }
+    
+    // 页面加载完成后启动性能监控
+    document.addEventListener('DOMContentLoaded', () => {
+      monitorScrollPerformance();
+      
+      // 添加调试功能（仅在开发模式）
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window.testEmptyState = function() {
+          console.log('Testing empty state...');
+          displayLogs([]);
+          totalLogsElement.textContent = '0';
+        };
+        
+        window.testWithData = function() {
+          console.log('Testing with sample data...');
+          const sampleLogs = [
+            {
+              timestamp: '12:34:56:789',
+              type: 'Log',
+              frame: 1,
+              category: 'Test',
+              message: 'Sample log message',
+              rawContent: '[!@#]12:34:56:789 [Log]: Sample log message'
+            }
+          ];
+          displayLogs(sampleLogs);
+          totalLogsElement.textContent = '1';
+        };
+        
+        console.log('Debug functions available:');
+        console.log('- testEmptyState(): Test empty state display');
+        console.log('- testWithData(): Test with sample data');
+      }
+    });
+  </script>
+  <script>
+    // 动态加载解析器脚本
+    const script = document.createElement('script');
+    script.src = 'log-parser.js?v=' + new Date().getTime();
+    script.onload = function() {
+      console.log('✅ log-parser.js 加载成功');
+      // 初始化解析器
+      initializeParser();
+    };
+    script.onerror = function() {
+      console.error('❌ log-parser.js 加载失败');
+    };
+    document.head.appendChild(script);
+  </script>
+  <script>
+    // 从URL获取日志文件地址
+    function getLogUrlFromParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      console.log("urlParams",urlParams);
+      return urlParams.get('logurl');
+    }
+
+    // 从URL加载日志文件
+    async function loadLogFromUrl(url) {
+      try {
+        // 显示下载按钮
+        document.getElementById('downloadOriginal').style.display = 'inline-block';
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+            // 获取文件大小
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+          const size = parseInt(contentLength);
+          // 格式化文件大小
+          const fileSizeStr = formatFileSize(size);
+          document.getElementById('fileSize').textContent = fileSizeStr;
+        }
+        const content = await response.text();
+        // 先解析会话
+        parseSessions(content);
+      } catch (error) {
+        console.error('加载日志文件失败:', error);
+        alert('加载日志文件失败: ' + error.message);
+      }
+    }
+
+    // 页面加载完成后检查URL参数
+    document.addEventListener('DOMContentLoaded', () => {
+      const logViewerElement = document.getElementById('logViewer');
+      if (logViewerElement) {
+        virtualScroll = new VirtualScroll(logViewerElement);
+      }
+
+      // 检查URL参数中是否有日志文件地址
+      const logUrl = getLogUrlFromParams();
+      if (logUrl) {
+        loadLogFromUrl(logUrl);
+      }
+    });
+
+    // 将全局变量声明移到最前面
+    let currentLogs = [];
+    let allCategories = [];
+    let searchTimer = null;  // 用于防抖
+    let lastSearchTerm = ''; // 缓存上次搜索词
+    let basicInfo = {};
+    let detailInfo = {};
+    let sessions = [];  // 存储所有会话
+    let currentSessionIndex = -1;  // 当前会话索引
+    let selectedOriginalIndex = -1; // 记录选中日志在原始数组中的索引
+    let currentMatchIndex = -1;  // 当前匹配项的索引
+    let matchedIndices = [];     // 所有匹配项的索引数组
+    let virtualScroll;  // 声明虚拟滚动实例
+
+    // 修改 VirtualScroll 类的构造函数
+    class VirtualScroll {
+      constructor(container, defaultItemHeight = 30) {
+        if (!container) {
+          console.error('Container element is required for VirtualScroll');
+          return;
+        }
+
+        this.container = container;
+        this.defaultItemHeight = defaultItemHeight;
+        this.items = [];
+        this.visibleItems = [];
+        this.startIndex = 0;
+        this.endIndex = 0;
+        this.bufferSize = 20;
+        this.expandedMessages = new Set();
+        this.itemHeights = new Map(); // 存储每个项的实际高度
+        this.focusedIndex = -1;
+        this.selectedIndex = -1;
+        this._totalHeight = null; // 添加总高度缓存
+        this._heightPrefixSum = []; // 高度前缀和数组，用于快速计算位置
+        this._lastScrollTop = 0; // 记录上次滚动位置
+        this._scrollDirection = 0; // 滚动方向：1向下，-1向上，0静止
+        
+        this.virtualList = container.querySelector('.virtual-list');
+        this.phantom = container.querySelector('.virtual-list-phantom');
+        
+        // 绑定方法
+        this.onScroll = this.onScroll.bind(this);
+        this.render = this.render.bind(this);
+        this.updateVisibleItems = this.updateVisibleItems.bind(this);
+        
+        // 添加滚动事件监听
+        this.container.addEventListener('scroll', this.onScroll);
+        
+        // 创建一个用于测量高度的隐藏元素
+        this.measureElement = document.createElement('div');
+        this.measureElement.style.position = 'absolute';
+        this.measureElement.style.visibility = 'hidden';
+        this.measureElement.style.width = this.virtualList.clientWidth + 'px';
+        this.measureElement.style.pointerEvents = 'none';
+        document.body.appendChild(this.measureElement);
+        
+        // 创建 ResizeObserver
+        this.observer = new ResizeObserver(this.updateVisibleItems);
+        this.observer.observe(container);
+        
+        // 初始化行高测量器和缓存
+        this.lineHeightMeasurer = null;
+        this.maxLengthCache = null;
+        this.scrollTimer = null;
+        this.averageExpandedHeight = this.defaultItemHeight * 4; // 展开项的平均高度估算
+        
+        // 性能优化：缓存常用的计算结果
+        this._multilineCache = new Map(); // 缓存多行判断结果
+        this._renderCache = new Map(); // 缓存渲染结果
+        this._lastRenderItems = []; // 上次渲染的项目
+        
+        // 滚动优化
+        this._isScrolling = false;
+        this._scrollEndTimer = null;
+        this._fastScrollThreshold = 100; // 快速滚动阈值
+      }
+
+      // 清理资源
+      destroy() {
+        if (this.observer) {
+          this.observer.disconnect();
+        }
+        if (this.lineHeightMeasurer) {
+          document.body.removeChild(this.lineHeightMeasurer);
+        }
+        if (this.measureElement) {
+          document.body.removeChild(this.measureElement);
+        }
+        if (this.scrollTimer) {
+          cancelAnimationFrame(this.scrollTimer);
+        }
+        if (this._scrollEndTimer) {
+          clearTimeout(this._scrollEndTimer);
+        }
+        // 移除事件监听
+        this.container.removeEventListener('scroll', this.onScroll);
+      }
+
+      // 清理高度缓存
+      clearHeightCache() {
+        this._totalHeight = null;
+        this.itemHeights.clear();
+        this._heightPrefixSum = [];
+        this._multilineCache.clear();
+        this._renderCache.clear();
+        // 清理滚动定时器
+        if (this.scrollTimer) {
+          cancelAnimationFrame(this.scrollTimer);
+          this.scrollTimer = null;
+        }
+      }
+
+      // 优化的多行内容判断（添加缓存）
+      isMultilineContent(log) {
+        const logKey = `${log.timestamp}_${log.category}_${log.message.length}`;
+        if (this._multilineCache.has(logKey)) {
+          return this._multilineCache.get(logKey);
+        }
+        
+        // 1. 检查是否有实际的换行符
+        const lines = log.message.split('\n');
+        if (lines.length > 3) {
+          this._multilineCache.set(logKey, true);
+          return true;
+        }
+        
+        // 2. 简化长度判断，避免复杂的DOM测量
+        const message = log.message.trim();
+        if (!message) {
+          this._multilineCache.set(logKey, false);
+          return false;
+        }
+        
+        // 使用简单的字符数估算，避免DOM测量
+        const estimatedCharsPerLine = Math.floor((this.virtualList.clientWidth - 400) / 8); // 假设每个字符8px
+        const estimatedLines = Math.ceil(message.length / estimatedCharsPerLine);
+        const result = estimatedLines > 3;
+        
+        this._multilineCache.set(logKey, result);
+        return result;
+      }
+
+      // 优化的高度计算（减少DOM操作）
+      measureItemHeight(log, index) {
+        // 检查缓存
+        if (this.itemHeights.has(index)) {
+          return this.itemHeights.get(index);
+        }
+        
+        const isExpanded = this.expandedMessages.has(index);
+        const isNetworkLog = log.category === 'NET_PROTO' || log.category === 'NET_SEND';
+        const isMultiline = this.isMultilineContent(log);
+        
+        let height;
+        
+        // 简化高度计算逻辑
+        if (isExpanded && (isNetworkLog || isMultiline)) {
+          // 展开状态：使用估算高度，避免DOM测量
+          if (isNetworkLog) {
+            // 网络日志展开时的估算高度
+            const lines = log.message.split('\n').length;
+            height = Math.max(this.defaultItemHeight * 2, lines * 20 + 20);
+          } else {
+            // 多行内容展开时的估算高度
+            const estimatedLines = Math.ceil(log.message.length / 80); // 假设每行80字符
+            height = Math.max(this.defaultItemHeight * 2, estimatedLines * 20 + 20);
+          }
+        } else if (isMultiline && !isNetworkLog && !isExpanded) {
+          // 多行内容折叠时显示3行
+          height = this.defaultItemHeight * 3;
+        } else {
+          // 普通日志或折叠的网络日志
+          height = this.defaultItemHeight;
+        }
+        
+        // 缓存高度
+        this.itemHeights.set(index, height);
+        return height;
+      }
+
+      // 构建高度前缀和数组（用于快速定位）
+      buildHeightPrefixSum() {
+        if (this._heightPrefixSum.length === this.items.length) {
+          return; // 已经构建过了
+        }
+        
+        this._heightPrefixSum = [0];
+        for (let i = 0; i < this.items.length; i++) {
+          const height = this.getItemHeight(i);
+          this._heightPrefixSum[i + 1] = this._heightPrefixSum[i] + height;
+        }
+      }
+
+      // 使用二分查找快速定位开始索引
+      findStartIndex(scrollTop) {
+        if (!this.items.length) return 0;
+        
+        this.buildHeightPrefixSum();
+        
+        // 二分查找
+        let left = 0;
+        let right = this._heightPrefixSum.length - 1;
+        let result = 0;
+        
+        while (left <= right) {
+          const mid = Math.floor((left + right) / 2);
+          if (this._heightPrefixSum[mid] <= scrollTop) {
+            result = mid;
+            left = mid + 1;
+          } else {
+            right = mid - 1;
+          }
+        }
+        
+        return Math.max(0, result - 1);
+      }
+
+      // 优化的可见区域更新
+      updateVisibleItems() {
+        const containerHeight = this.container.clientHeight;
+        const scrollTop = this.container.scrollTop;
+        
+        if (!this.items.length) {
+          // 处理空数组情况
+          this.visibleItems = [];
+          this.startIndex = 0;
+          this.endIndex = 0;
+          this.phantom.style.height = '0px';
+          this.virtualList.style.transform = 'translate3d(0, 0px, 0)';
+          this.render();
+          return;
+        }
+        
+        // 检测滚动方向和速度
+        const scrollDelta = scrollTop - this._lastScrollTop;
+        this._scrollDirection = scrollDelta > 0 ? 1 : scrollDelta < 0 ? -1 : 0;
+        const isFastScroll = Math.abs(scrollDelta) > this._fastScrollThreshold;
+        this._lastScrollTop = scrollTop;
+        
+        // 动态调整缓冲区大小
+        const expandedCount = this.expandedMessages.size;
+        const baseBufSize = Math.ceil(containerHeight / this.defaultItemHeight);
+        let bufferSize = Math.min(baseBufSize + Math.floor(expandedCount / 10), baseBufSize * 2);
+        
+        // 快速滚动时增加缓冲区
+        if (isFastScroll) {
+          bufferSize = Math.min(bufferSize * 2, 100);
+        }
+        
+        // 找到开始索引
+        const idealStartIndex = this.findStartIndex(scrollTop);
+        this.startIndex = Math.max(0, idealStartIndex - bufferSize);
+        
+        // 计算结束索引
+        const targetHeight = containerHeight + (isFastScroll ? containerHeight * 2 : containerHeight);
+        let endIndex = idealStartIndex;
+        let accumulatedHeight = 0;
+        
+        while (accumulatedHeight < targetHeight && endIndex < this.items.length) {
+          accumulatedHeight += this.getItemHeight(endIndex);
+          endIndex++;
+        }
+        
+        this.endIndex = Math.min(endIndex + bufferSize, this.items.length);
+        
+        // 获取可见项
+        this.visibleItems = this.items.slice(this.startIndex, this.endIndex);
+        
+        // 计算顶部偏移
+        const topOffset = this._heightPrefixSum[this.startIndex] || this.getTotalHeight(0, this.startIndex);
+        
+        // 使用transform3d启用硬件加速
+        this.virtualList.style.transform = `translate3d(0, ${topOffset}px, 0)`;
+        
+        // 更新总高度
+        const totalHeight = this._heightPrefixSum[this.items.length] || this.getTotalHeight(0, this.items.length);
+        this.phantom.style.height = `${totalHeight}px`;
+        
+        this.render();
+      }
+
+      // 设置数据项
+      setItems(items) {
+        this.items = items;
+        this.expandedMessages.clear();
+        this.clearHeightCache();
+        
+        // 如果是空数组，重置滚动位置
+        if (items.length === 0) {
+          this.container.scrollTop = 0;
+        }
+        
+        this.updateVisibleItems();
+      }
+
+      // 优化的滚动事件处理
+      onScroll() {
+        // 标记正在滚动
+        this._isScrolling = true;
+        
+        // 清除滚动结束定时器
+        if (this._scrollEndTimer) {
+          clearTimeout(this._scrollEndTimer);
+        }
+        
+        // 防抖处理，避免频繁更新
+        if (this.scrollTimer) {
+          return;
+        }
+        
+        this.scrollTimer = requestAnimationFrame(() => {
+          this.updateVisibleItems();
+          this.scrollTimer = null;
+        });
+        
+        // 设置滚动结束检测
+        this._scrollEndTimer = setTimeout(() => {
+          this._isScrolling = false;
+          // 滚动结束后可以做一些清理工作
+        }, 150);
+      }
+
+      // 添加 setSelectedIndex 方法
+      setSelectedIndex(index) {
+        this.selectedIndex = index;
+        this.render();
+      }
+
+      // 添加 setFocusedIndex 方法
+      setFocusedIndex(index) {
+        this.focusedIndex = index;
+        this.render();
+      }
+
+      // 添加 scrollToIndex 方法
+      scrollToIndex(index, position = 'center') {
+        if (index < 0 || index >= this.items.length) return;
+        
+        this.buildHeightPrefixSum();
+        const targetOffset = this._heightPrefixSum[index];
+        const itemHeight = this.getItemHeight(index);
+        const containerHeight = this.container.clientHeight;
+        
+        switch (position) {
+          case 'top':
+            this.container.scrollTop = targetOffset;
+            break;
+          case 'bottom':
+            this.container.scrollTop = targetOffset - containerHeight + itemHeight;
+            break;
+          case 'oneThird':
+            this.container.scrollTop = targetOffset - (containerHeight / 3);
+            break;
+          default: // center
+            this.container.scrollTop = targetOffset - (containerHeight / 2) + (itemHeight / 2);
+        }
+      }
+
+      // 获取指定范围内所有项的总高度
+      getTotalHeight(startIndex, endIndex) {
+        if (this._heightPrefixSum.length > 0) {
+          return this._heightPrefixSum[endIndex] - this._heightPrefixSum[startIndex];
+        }
+        
+        // 回退到原始计算方法
+        let height = 0;
+        for (let i = startIndex; i < endIndex; i++) {
+          height += this.getItemHeight(i);
+        }
+        return height;
+      }
+
+      // 获取单个项的高度
+      getItemHeight(index) {
+        if (this.itemHeights.has(index)) {
+          return this.itemHeights.get(index);
+        }
+        
+        // 智能预估
+        if (this.expandedMessages.has(index)) {
+          return this.averageExpandedHeight;
+        }
+        
+        const log = this.items[index];
+        if (log) {
+          const isNetworkLog = log.category === 'NET_PROTO' || log.category === 'NET_SEND';
+          const isMultiline = this.isMultilineContent(log);
+          if (isNetworkLog || isMultiline) {
+            return this.defaultItemHeight * 1.2;
+          }
+        }
+        
+        return this.defaultItemHeight;
+      }
+
+      // 添加 findStartIndex 方法
+      findStartIndex(scrollTop) {
+        if (!this.items.length) return 0;
+        
+        this.buildHeightPrefixSum();
+        
+        // 二分查找
+        let left = 0;
+        let right = this._heightPrefixSum.length - 1;
+        let result = 0;
+        
+        while (left <= right) {
+          const mid = Math.floor((left + right) / 2);
+          if (this._heightPrefixSum[mid] <= scrollTop) {
+            result = mid;
+            left = mid + 1;
+          } else {
+            right = mid - 1;
+          }
+        }
+        
+        return Math.max(0, result - 1);
+      }
+
+      // 渲染单个日志项
+      renderLogItem(log, globalIndex, isExpanded) {
+        const message = log.message.trim();
+        const isFocused = globalIndex === this.focusedIndex;
+        const isSelected = globalIndex === this.selectedIndex;
+        
+        const isNetworkLog = log.category === 'NET_PROTO' || log.category === 'NET_SEND';
+        const isMultiline = this.isMultilineContent(log);
+        const canToggle = isNetworkLog || isMultiline;
+        
+        const messageClass = canToggle ? 
+          `log-message multiline ${isExpanded ? 'expanded' : 'collapsed'}` : 
+          'log-message';
+          
+        const searchTerm = lastSearchTerm;
+        
+        // 优化高亮逻辑，减少不必要的处理
+        let displayMessage;
+        if (searchTerm && message.toLowerCase().includes(searchTerm.toLowerCase())) {
+          // 只有在确实包含搜索词时才进行高亮处理
+          if (canToggle && isExpanded) {
+            displayMessage = this.highlightTextOptimized(message, searchTerm);
+          } else if (canToggle && !isExpanded) {
+            // 折叠状态下的消息处理
+            if (isMultiline && !isNetworkLog) {
+              const lines = message.split('\n');
+              if (lines.length > 3) {
+                const previewLines = lines.slice(0, 3);
+                displayMessage = this.highlightTextOptimized(previewLines.join('\n') + '...', searchTerm);
+              } else {
+                // 长内容截断
+                const maxLength = 300; // 使用固定长度，避免复杂计算
+                if (message.length > maxLength) {
+                  displayMessage = this.highlightTextOptimized(message.substring(0, maxLength) + '...', searchTerm);
+                } else {
+                  displayMessage = this.highlightTextOptimized(message, searchTerm);
+                }
+              }
+            } else {
+              displayMessage = this.highlightTextOptimized(message, searchTerm);
+            }
+          } else {
+            displayMessage = this.highlightTextOptimized(message, searchTerm);
+          }
+        } else {
+          // 没有搜索词或不匹配时，直接处理消息
+          if (canToggle && !isExpanded) {
+            if (isMultiline && !isNetworkLog) {
+              const lines = message.split('\n');
+              if (lines.length > 3) {
+                displayMessage = this.escapeHtml(lines.slice(0, 3).join('\n') + '...');
+              } else {
+                const maxLength = 300;
+                displayMessage = message.length > maxLength ? 
+                  this.escapeHtml(message.substring(0, maxLength) + '...') : 
+                  this.escapeHtml(message);
+              }
+            } else {
+              displayMessage = this.escapeHtml(message);
+            }
+          } else {
+            displayMessage = this.escapeHtml(message);
+          }
+        }
+
+        // 添加展开/收起按钮
+        const toggleBtn = canToggle ? 
+          `<span class="toggle-btn" onclick="toggleMessage(${globalIndex})">${isExpanded ? '[收起]' : '[展开]'}</span>` : 
+          `<span class="toggle-btn"></span>`;
+
+        return `
+          <div class="log-item${isFocused ? ' focused' : ''}${isSelected ? ' selected' : ''}"
+               data-index="${globalIndex}">
+            <span class="log-index">${globalIndex + 1}</span>
+            <span class="log-timestamp">${log.timestamp}</span>
+            ${this.getFrameInfoOptimized(log)}
+            <span class="log-type ${log.type}">${log.type}</span>
+            <span class="log-category">${log.category}</span>
+            ${toggleBtn}
+            <span class="${messageClass}" 
+                  data-index="${globalIndex}"
+                  data-network="${isNetworkLog ? 'true' : 'false'}">${displayMessage}</span>
+          </div>
+        `;
+      }
+
+      // 优化的高亮文本方法
+      highlightTextOptimized(text, searchTerm) {
+        if (!searchTerm || !text) return this.escapeHtml(text);
+        
+        try {
+          // 使用更简单的替换方法
+          const escapedText = this.escapeHtml(text);
+          const escapedSearchTerm = this.escapeHtml(searchTerm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+          
+          return escapedText.replace(regex, '<span class="highlight">$1</span>');
+        } catch (e) {
+          console.error('Highlight error:', e);
+          return this.escapeHtml(text);
+        }
+      }
+
+      // HTML转义方法
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // 优化的帧信息获取
+      getFrameInfoOptimized(log) {
+        return `<span class="log-frame">${log.frame}</span>`;
+      }
+
+      // 渲染可见区域
+      render() {
+        // 检查是否需要重新渲染
+        const currentItemsKey = this.visibleItems.map(item => `${item.timestamp}_${item.category}`).join(',');
+        const expandedKey = Array.from(this.expandedMessages).sort().join(',');
+        const renderKey = `${currentItemsKey}_${expandedKey}_${this.focusedIndex}_${this.selectedIndex}_${this.items.length}`;
+        
+        if (this._lastRenderKey === renderKey && this.items.length > 0) {
+          return; // 无需重新渲染（但空数组时必须渲染）
+        }
+        this._lastRenderKey = renderKey;
+        
+        // 处理空数据情况
+        if (this.items.length === 0) {
+          this.virtualList.innerHTML = `
+            <div class="empty-state" style="
+              text-align: center; 
+              color: #999; 
+              padding: 40px 20px;
+              font-size: 16px;
+              background: #f8f9fa;
+              border-radius: 8px;
+              margin: 20px;
+              border: 2px dashed #dee2e6;
+            ">
+              <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+              <div style="font-weight: 500; margin-bottom: 8px;">暂无符合条件的日志</div>
+              <div style="font-size: 14px; color: #6c757d;">请尝试调整筛选条件或选择其他日志类型</div>
+            </div>
+          `;
+          return;
+        }
+        
+        // 批量渲染
+        const fragment = document.createDocumentFragment();
+        const tempDiv = document.createElement('div');
+        
+        const htmlContent = this.visibleItems.map((log, index) => {
+          const globalIndex = this.startIndex + index;
+          return this.renderLogItem(log, globalIndex, this.expandedMessages.has(globalIndex));
+        }).join('');
+        
+        tempDiv.innerHTML = htmlContent;
+        while (tempDiv.firstChild) {
+          fragment.appendChild(tempDiv.firstChild);
+        }
+        
+        // 一次性替换内容
+        this.virtualList.innerHTML = '';
+        this.virtualList.appendChild(fragment);
+      }
+
+      // 切换展开/收起状态
+      toggleExpanded(index) {
+        const log = this.items[index];
+        if (!log) return;
+        
+        // 记录当前状态
+        const currentScrollTop = this.container.scrollTop;
+        const wasExpanded = this.expandedMessages.has(index);
+        const oldHeight = this.getItemHeight(index);
+        
+        // 切换展开状态
+        if (wasExpanded) {
+          this.expandedMessages.delete(index);
+        } else {
+          this.expandedMessages.add(index);
+        }
+        
+        // 清理当前项的高度缓存
+        this.itemHeights.delete(index);
+        // 重建高度前缀和
+        this._heightPrefixSum = [];
+        
+        // 重新测量高度
+        const newHeight = this.measureItemHeight(log, index);
+        const heightDelta = newHeight - oldHeight;
+        
+        // 如果目标项在当前视口上方，调整滚动位置
+        if (heightDelta !== 0) {
+          this.buildHeightPrefixSum();
+          const offsetBefore = this._heightPrefixSum[index];
+          
+          if (offsetBefore < currentScrollTop) {
+            const newScrollTop = currentScrollTop + heightDelta;
+            this.container.scrollTop = newScrollTop;
+          }
+        }
+        
+        // 延迟更新，避免滚动事件冲突
+        requestAnimationFrame(() => {
+          this.updateVisibleItems();
+          
+          // 如果目标项不在可见区域，滚动到该项
+          if (index < this.startIndex || index >= this.endIndex) {
+            requestAnimationFrame(() => {
+              this.scrollToIndex(index, 'oneThird');
+            });
+          }
+        });
+      }
+    }
+
+    let parser = null;  // 延迟初始化
+    
+    // 初始化解析器函数
+    function initializeParser() {
+      try {
+        console.log('🔧 正在初始化LogParser...');
+        parser = new LogParser();
+        console.log('✅ LogParser初始化成功');
+        
+        // 如果有URL参数，自动加载日志
+        const logUrl = getLogUrlFromParams();
+        if (logUrl) {
+          console.log('🔍 检测到URL参数，自动加载日志:', logUrl);
+          loadLogFromUrl(logUrl);
+        }
+      } catch (error) {
+        console.error('❌ LogParser初始化失败:', error);
+      }
+    }
+    const logViewer = document.getElementById('logViewer');
+    const logLevelSelect = document.getElementById('logLevel');
+    const moduleFilter = document.getElementById('moduleFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const moduleSuggestions = document.getElementById('moduleSuggestions');
+    const contentFilter = document.getElementById('contentFilter');
+    const fileInput = document.getElementById('logFile');
+    const totalLogsElement = document.getElementById('totalLogs');
+    const fileSizeElement = document.getElementById('fileSize');
+
+    // 启用所有控件
+    function enableControls() {
+      typeFilter.disabled = false;
+      logLevelSelect.disabled = false;
+      moduleFilter.disabled = false;
+      contentFilter.disabled = false;
+      document.getElementById('exportBtn').disabled = false;
+      document.getElementById('showOnlyMatches').disabled = false;
+      document.getElementById('expandAllByDefault').disabled = false;
+    }
+
+    // 重置所有筛选器
+    function resetFilters() {
+      typeFilter.value = 'All';
+      logLevelSelect.value = 'All';
+      moduleFilter.value = '';
+      contentFilter.value = '';
+      lastSearchTerm = '';
+      document.getElementById('showOnlyMatches').checked = false;
+      document.getElementById('expandAllByDefault').checked = false;
+      moduleSuggestions.style.display = 'none';
+      
+      // 显示所有日志并定位到选中的日志
+      if (selectedOriginalIndex >= 0) {
+        displayLogs(currentLogs);
+        virtualScroll.setSelectedLog(selectedOriginalIndex);
+      }
+    }
+
+    function handleFileSelect(event) {
+      // 如果取消选择，保持当前状态
+      if (!event.target.files || !event.target.files[0]) {
+        // 恢复之前的选择
+        const prevFile = event.target.dataset.prevFile;
+        if (prevFile) {
+          event.target.value = prevFile;
+        }
+        return;
+      }
+
+      const file = event.target.files[0];
+      
+      // 检查文件类型
+      if (!file.name.toLowerCase().endsWith('.txt')) {
+        alert('请选择 .txt 格式的日志文件');
+        // 恢复之前的选择
+        const prevFile = event.target.dataset.prevFile;
+        if (prevFile) {
+          event.target.value = prevFile;
+        }
+        return;
+      }
+      
+      // 保存当前选择
+      event.target.dataset.prevFile = event.target.value;
+      
+      // 重置所有状态
+      resetFilters();
+      
+      // 隐藏下载原始文件按钮（因为现在是本地文件）
+      document.getElementById('downloadOriginal').style.display = 'none';
+      
+      // 清除 URL 参数中的 logurl
+      const url = new URL(window.location.href);
+      url.searchParams.delete('logurl');
+      window.history.replaceState({}, '', url);
+      
+      fileSizeElement.textContent = formatFileSize(file.size);
+      
+      // 禁用所有控件
+      typeFilter.disabled = true;
+      logLevelSelect.disabled = true;
+      moduleFilter.disabled = true;
+      contentFilter.disabled = true;
+      document.getElementById('exportBtn').disabled = true;
+      document.getElementById('showOnlyMatches').disabled = true;
+      document.getElementById('expandAllByDefault').disabled = true;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        // 先解析会话
+        parseSessions(e.target.result);
+      };
+      
+      reader.readAsText(file);
+    }
+
+    function getFrameInfo(log) {
+      return `<span class="log-frame">${log.frame}</span>`;
+    }
+
+    // 防抖函数
+    function debounce(func, wait) {
+      return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          func.apply(context, args);
+        }, wait);
+      };
+    }
+
+    // 优化的全局高亮函数（保留向后兼容）
+    function highlightText(text, searchTerm) {
+      if (!searchTerm || !text) return escapeHtml(text);
+      
+      try {
+        // 使用更简单的替换方法
+        const escapedText = escapeHtml(text);
+        const escapedSearchTerm = escapeHtml(searchTerm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+        
+        return escapedText.replace(regex, '<span class="highlight">$1</span>');
+      } catch (e) {
+        console.error('Highlight error:', e);
+        return escapeHtml(text);
+      }
+    }
+
+    // 全局HTML转义函数
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function displayLogs(logs) {
+      virtualScroll.setItems(logs);
+      
+      // 检查是否需要默认全展开
+      const expandAll = document.getElementById('expandAllByDefault').checked;
+      if (expandAll) {
+        // 延迟执行，确保setItems完成
+        setTimeout(() => {
+          expandAllToggleableItems();
+        }, 0);
+      }
+    }
+
+    function toggleMessage(index) {
+      virtualScroll.toggleExpanded(index);
+    }
+
+    // 处理搜索选项变化
+    function handleSearchOptionsChange() {
+      const showOnlyMatches = document.getElementById('showOnlyMatches').checked;
+      if (showOnlyMatches) {
+        // 如果勾选了"仅显示搜索内容"，重新应用过滤
+        filterLogs();
+      } else {
+        // 如果取消勾选，显示所有日志但保持高亮
+        displayLogs(currentLogs);
+      }
+      updateMatchNavigation();
+    }
+
+    // 处理默认全展开选项变化
+    function handleExpandAllChange() {
+      const expandAll = document.getElementById('expandAllByDefault').checked;
+      
+      if (expandAll) {
+        // 展开所有可展开的内容
+        expandAllToggleableItems();
+      } else {
+        // 收起所有内容
+        collapseAllItems();
+      }
+    }
+
+    // 展开所有可展开的项目
+    function expandAllToggleableItems() {
+      if (!virtualScroll || !virtualScroll.items) return;
+      
+      // 批量添加展开状态
+      const newExpandedItems = new Set();
+      virtualScroll.items.forEach((log, index) => {
+        const isNetworkLog = log.category === 'NET_PROTO' || log.category === 'NET_SEND';
+        const isMultiline = virtualScroll.isMultilineContent(log);
+        
+        if (isNetworkLog || isMultiline) {
+          newExpandedItems.add(index);
+        }
+      });
+      
+      // 一次性更新展开状态
+      virtualScroll.expandedMessages = newExpandedItems;
+      
+      // 清理高度缓存并重新渲染
+      virtualScroll.clearHeightCache();
+      virtualScroll.updateVisibleItems();
+    }
+
+    // 收起所有项目
+    function collapseAllItems() {
+      if (!virtualScroll) return;
+      
+      // 清空展开状态
+      virtualScroll.expandedMessages.clear();
+      
+      // 清理高度缓存并重新渲染
+      virtualScroll.clearHeightCache();
+      virtualScroll.updateVisibleItems();
+    }
+
+    // 更新匹配导航状态
+    function updateMatchNavigation() {
+      const searchTerm = contentFilter.value.trim();
+      const prevButton = document.getElementById('prevMatch');
+      const nextButton = document.getElementById('nextMatch');
+      const matchInfo = document.getElementById('matchInfo');
+      
+      if (!searchTerm) {
+        prevButton.disabled = true;
+        nextButton.disabled = true;
+        matchInfo.textContent = '';
+        return;
+      }
+
+      // 检查是否有可搜索的项目
+      if (!virtualScroll || !virtualScroll.items || virtualScroll.items.length === 0) {
+        prevButton.disabled = true;
+        nextButton.disabled = true;
+        currentMatchIndex = -1;
+        matchInfo.textContent = '无匹配项';
+        return;
+      }
+
+      // 获取所有匹配项的索引
+      matchedIndices = [];
+      virtualScroll.items.forEach((log, index) => {
+        if (log.message.toLowerCase().includes(searchTerm.toLowerCase())) {
+          matchedIndices.push(index);
+        }
+      });
+
+      const totalMatches = matchedIndices.length;
+      if (totalMatches > 0) {
+        prevButton.disabled = false;
+        nextButton.disabled = false;
+        if (currentMatchIndex === -1) {
+          currentMatchIndex = 0;
+        }
+        matchInfo.textContent = `${currentMatchIndex + 1}/${totalMatches}`;
+      } else {
+        prevButton.disabled = true;
+        nextButton.disabled = true;
+        currentMatchIndex = -1;
+        matchInfo.textContent = '无匹配项';
+      }
+    }
+
+    // 查找上一个匹配项
+    function findPrevMatch() {
+      if (matchedIndices.length === 0) return;
+      
+      currentMatchIndex = currentMatchIndex <= 0 ? 
+        matchedIndices.length - 1 : currentMatchIndex - 1;
+      
+      const targetIndex = matchedIndices[currentMatchIndex];
+      virtualScroll.setSelectedIndex(targetIndex);  // 设置选中状态
+      virtualScroll.scrollToIndex(targetIndex);
+      updateMatchNavigation();
+    }
+
+    // 查找下一个匹配项
+    function findNextMatch() {
+      if (matchedIndices.length === 0) return;
+      
+      currentMatchIndex = currentMatchIndex >= matchedIndices.length - 1 ? 
+        0 : currentMatchIndex + 1;
+      
+      const targetIndex = matchedIndices[currentMatchIndex];
+      virtualScroll.setSelectedIndex(targetIndex);  // 设置选中状态
+      virtualScroll.scrollToIndex(targetIndex);
+      updateMatchNavigation();
+    }
+
+    // 修改 filterLogs 函数，返回筛选后的数据
+    function filterLogs() {
+      const selectedLevel = logLevelSelect.value;
+      const moduleKeyword = moduleFilter.value.toLowerCase();
+      const selectedType = typeFilter.value;
+      const contentKeyword = contentFilter.value.trim().toLowerCase();
+      const showOnlyMatches = document.getElementById('showOnlyMatches').checked;
+      
+      let filteredLogs = currentLogs;
+      
+      // 应用类型筛选
+      if (selectedType === 'Network') {
+        filteredLogs = filteredLogs.filter(log => parser.isNetworkLog(log));
+      } else if (selectedType === 'Normal') {
+        filteredLogs = filteredLogs.filter(log => !parser.isNetworkLog(log));
+      }
+      
+      // 应用日志等级筛选
+      if (selectedLevel !== 'All') {
+        filteredLogs = filteredLogs.filter(log => log.type === selectedLevel);
+      }
+      
+      // 应用模块筛选
+      if (moduleKeyword) {
+        filteredLogs = filteredLogs.filter(log => 
+          log.category.toLowerCase().includes(moduleKeyword)
+        );
+      }
+      
+      // 应用内容搜索
+      if (contentKeyword) {
+        lastSearchTerm = contentKeyword;
+        if (showOnlyMatches) {
+          filteredLogs = filteredLogs.filter(log => 
+            log.message.toLowerCase().includes(contentKeyword)
+          );
+        }
+      } else {
+        lastSearchTerm = '';
+      }
+      
+      displayLogs(filteredLogs);
+      
+      // 更新匹配导航状态
+      updateMatchNavigation();
+      
+      // 更新当前显示的日志数
+      totalLogsElement.textContent = filteredLogs.length;
+
+      return filteredLogs;  // 返回筛选后的数据
+    }
+
+    // 修改内容搜索的事件处理
+    contentFilter.addEventListener('input', debounce(function() {
+      // 当搜索框为空时，清除所有状态
+      if (!this.value.trim()) {
+        lastSearchTerm = '';
+        currentMatchIndex = -1;
+        matchedIndices = [];
+        virtualScroll.setFocusedIndex(-1);  // 清除聚焦
+        virtualScroll.setSelectedIndex(-1);  // 清除选中状态
+      }
+      filterLogs();
+    }, 200));
+
+    // 处理模块输入
+    moduleFilter.addEventListener('input', function() {
+      const value = this.value.toLowerCase();
+      if (!value) {
+        moduleSuggestions.style.display = 'none';
+        filterLogs();
+        return;
+      }
+      
+      const matches = allCategories.filter(cat => 
+        cat.toLowerCase().includes(value)
+      );
+      
+      if (matches.length === 0) {
+        moduleSuggestions.style.display = 'none';
+        return;
+      }
+      
+      moduleSuggestions.innerHTML = matches
+        .map(cat => `
+          <div class="module-suggestion-item" onclick="selectModule('${cat}')">${cat}</div>
+        `).join('');
+      
+      moduleSuggestions.style.display = 'block';
+      filterLogs();  // 实时过滤
+    });
+
+    // 选择模块
+    function selectModule(category) {
+      moduleFilter.value = category;
+      moduleSuggestions.style.display = 'none';
+      filterLogs();
+    }
+
+    // 点击外部关闭建议列表
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.module-filter-container')) {
+        moduleSuggestions.style.display = 'none';
+      }
+    });
+
+    // 解析会话
+    function parseSessions(content) {
+      if (!parser) {
+        console.error('❌ 解析器未初始化，无法解析会话');
+        alert('解析器未初始化，请刷新页面重试');
+        return;
+      }
+      
+      console.log('📝 开始解析会话，内容长度:', content.length, '字符');
+      
+      const lines = content.split('\n');
+      let sessionStart = -1;
+      let currentSession = [];
+      sessions = [];  // 清空旧会话
+      let headerLines = [];  // 存储头部信息
+      
+      // 先收集头部信息
+      let i = 0;
+      while (i < lines.length && !lines[i].startsWith('[!@#]')) {
+        if (lines[i].trim()) {
+          headerLines.push(lines[i]);
+        }
+        i++;
+      }
+      
+      // 查找所有会话
+      for (; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes('[FileAppender] Log started')) {
+          if (sessionStart !== -1) {
+            // 保存上一个会话
+            sessions.push({
+              start: sessionStart,
+              end: i - 1,
+              lines: [...headerLines, ...currentSession]  // 包含头部信息
+            });
+          }
+          sessionStart = i;
+          currentSession = [line];
+        } else if (sessionStart !== -1) {
+          currentSession.push(line);
+        }
+      }
+      
+      // 保存最后一个会话
+      if (sessionStart !== -1) {
+        sessions.push({
+          start: sessionStart,
+          end: lines.length - 1,
+          lines: [...headerLines, ...currentSession]  // 包含头部信息
+        });
+      }
+
+      console.log(`🎯 会话解析完成，共找到 ${sessions.length} 个会话`);
+      sessions.forEach((session, index) => {
+        console.log(`  会话 ${index + 1}: ${session.lines.length} 行内容`);
+      });
+      
+      // 更新会话选择器
+      updateSessionSelector();
+      
+      // 默认加载最后一个会话
+      if (sessions.length > 0) {
+        currentSessionIndex = sessions.length - 1;
+        console.log(`🚀 自动加载最后一个会话: 第 ${currentSessionIndex + 1} 次`);
+        loadSession(currentSessionIndex);
+        // 更新当前会话信息
+        document.getElementById('currentSession').textContent = 
+          `当前: 第 ${currentSessionIndex + 1} 次`;
+        document.getElementById('sessionCount').textContent = 
+          `共 ${sessions.length} 次登录`;
+      } else {
+        console.warn('⚠️ 没有找到任何会话');
+      }
+    }
+
+    // 更新会话选择器
+    function updateSessionSelector() {
+      const select = document.getElementById('sessionSelect');
+      const sessionCountElement = document.getElementById('sessionCount');
+      const currentSessionElement = document.getElementById('currentSession');
+      
+      // 先找到每个会话的第一条日志时间作为标识
+      const sessionOptions = sessions.map((session, index) => {
+        // 查找第一条日志的时间戳
+        const firstLogMatch = session.lines.find(line => line.startsWith('[!@#]'));
+        let sessionTime = `会话 ${index + 1}`;
+        if (firstLogMatch) {
+          const timeMatch = firstLogMatch.match(/\[!@#\](\d{2}:\d{2}:\d{2}:\d{3})/);
+          if (timeMatch) {
+            sessionTime = timeMatch[1];
+          }
+        }
+        return `<option value="${index}" ${index === currentSessionIndex ? 'selected' : ''}>
+          ${sessionTime}
+        </option>`;
+      });
+      
+      select.innerHTML = '<option value="">选择登录会话...</option>' + sessionOptions.join('');
+      select.disabled = sessions.length === 0;
+      
+      // 更新会话统计信息
+      sessionCountElement.textContent = `共 ${sessions.length} 次登录`;
+      currentSessionElement.textContent = currentSessionIndex >= 0 ? 
+        `当前: 第 ${currentSessionIndex + 1} 次` : 
+        '当前: --';
+    }
+
+    // 切换会话时也更新当前会话信息
+    function switchSession() {
+      const select = document.getElementById('sessionSelect');
+      const index = parseInt(select.value);
+      if (index >= 0 && index < sessions.length) {
+        currentSessionIndex = index;
+        loadSession(index);
+        document.getElementById('currentSession').textContent = 
+          `当前: 第 ${index + 1} 次`;
+      }
+    }
+
+    // 加载指定会话
+    function loadSession(index) {
+      if (!parser) {
+        console.error('❌ 解析器未初始化');
+        return;
+      }
+      
+      const session = sessions[index];
+      const content = session.lines.join('\n');
+      
+      console.log(`🔍 加载会话 ${index + 1}, 内容长度: ${content.length} 字符`);
+      
+      // 重置解析器状态
+      parser.logs = [];
+      parser.categories.clear();
+      parser.networkLogs = [];
+      parser.normalLogs = [];
+      parser.battleLogs = [];
+      parser.entityLogs = [];
+      parser.errorLogs = [];
+      parser.currentMultiLineLog = null;
+      
+      // 解析基本信息
+      parseBasicInfo(content);
+      
+      // 解析日志
+      console.log('📊 开始解析日志内容...');
+      parser.parseLogFile(content);
+      currentLogs = parser.logs;
+      allCategories = parser.getCategories();
+      
+      console.log(`✅ 解析完成: ${currentLogs.length} 条日志, ${allCategories.length} 个模块`);
+      console.log('模块列表:', allCategories);
+      
+      // 解析账号ID
+      parseAccountId(currentLogs);
+      
+      // 更新显示
+      totalLogsElement.textContent = currentLogs.length;
+      document.getElementById('networkCount').textContent = parser.networkLogs.length;
+      document.getElementById('errorCount').textContent = parser.errorLogs.length;
+      
+      console.log('🎨 更新界面显示...');
+      enableControls();
+      // 重置筛选条件
+      resetFilters();
+      displayLogs(parser.logs);
+      
+      console.log('🎉 会话加载完成!');
+      
+      // 更新会话选择器的选中状态
+      const select = document.getElementById('sessionSelect');
+      select.value = index;
+      
+      // 滚动到顶部
+      document.getElementById('logViewer').scrollTop = 0;
+    }
+
+    // 从日志中解析账号ID
+    function parseAccountId(logs) {
+      // 查找 AuthorizeRequest 日志
+      let authLog = logs.find(log => 
+        log.isNetworkLog && log.NetName === 'AuthorizeRequest' && 
+        log.message.includes('"FID"')
+      );
+      
+      if (authLog) {
+        try {
+          // 使用正则表达式直接从消息中提取 FID 值，支持多行
+          const match = authLog.message.match(/"FID"\s*:\s*"([^"]+)"/s);
+          if (match && match[1]) {
+            // 去除所有换行符和多余的空白字符
+            const accountId = match[1].replace(/[\n\r]+/g, '').trim();
+            document.getElementById('accountId').textContent = accountId;
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to parse AuthorizeRequest:', e);
+        }
+      }
+
+      // 如果没找到，设置为默认值
+      document.getElementById('accountId').textContent = '--';
+    }
+
+    // 解析基本信息
+    function parseBasicInfo(content) {
+      const lines = content.split('\n');
+      basicInfo = {};  // 清空旧信息
+      detailInfo = {};
+      
+      for (const line of lines) {
+        if (line.startsWith('[!@#]')) {
+          break;
+        }
+        
+        const colonIndex = line.indexOf(':');
+        if (colonIndex !== -1) {
+          const key = line.substring(0, colonIndex).trim();
+          const value = line.substring(colonIndex + 1).trim();
+          
+          switch(key) {
+            case 'version':
+            case 'loginid':
+            case 'TM':
+            case 'platform':
+            case 'lanid':
+            case 'isOnline':
+            case '上传来源':
+              basicInfo[key] = value;
+              break;
+            default:
+              detailInfo[key] = value;
+          }
+        }
+      }
+      
+      updateInfoDisplay();
+    }
+
+    // 更新信息显示
+    function updateInfoDisplay() {
+      document.getElementById('version').textContent = basicInfo.version || '--';
+      document.getElementById('loginId').textContent = basicInfo.loginid || '--';
+      document.getElementById('logTime').textContent = basicInfo.TM || '--';
+      document.getElementById('platform').textContent = basicInfo.platform || '--';
+      document.getElementById('language').textContent = basicInfo.lanid || '--';
+      document.getElementById('source').textContent = basicInfo['上传来源'] || '--';
+      const isOnline = basicInfo.isOnline === 'true' ? '线上' : 
+                      basicInfo.isOnline === 'false' ? '开发' : '--';
+      document.getElementById('isOnline').textContent = isOnline;
+    }
+
+    // 显示详细信息
+    function showDetailInfo() {
+      const modal = document.getElementById('detailInfoModal');
+      const detailDiv = document.getElementById('detailInfo');
+      
+      detailDiv.innerHTML = Object.entries(detailInfo)
+        .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+        .join('\n');
+      
+      modal.style.display = 'block';
+    }
+
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 关闭弹窗
+    document.querySelector('.close').onclick = function() {
+      document.getElementById('detailInfoModal').style.display = 'none';
+    }
+
+    // 点击弹窗外部关闭
+    window.onclick = function(event) {
+      const modal = document.getElementById('detailInfoModal');
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    // 修改 exportLogs 函数
+    function exportLogs() {
+      // 获取当前会话的原始内容
+      const session = sessions[currentSessionIndex];
+      if (!session) return;
+
+      // 1. 收集基本信息行
+      const basicInfoLines = [];
+      for (const line of session.lines) {
+        // 如果遇到日志开始标记，停止收集基本信息
+        if (line.startsWith('[!@#]')) {
+          break;
+        }
+        if (line.trim()) {
+          basicInfoLines.push(line);
+        }
+      }
+
+      // 2. 获取当前筛选条件下的日志
+      const filteredLogs = filterLogs();  // 直接使用 filterLogs 的返回值
+      
+      // 3. 构建导出内容
+      let exportContent = [];
+      
+      // 添加基本信息
+      exportContent.push('# 基本信息');
+      exportContent.push(...basicInfoLines);
+      exportContent.push('');  // 空行分隔
+      
+      // 添加筛选条件信息
+      const selectedLevel = logLevelSelect.value;
+      const moduleKeyword = moduleFilter.value.toLowerCase();
+      const selectedType = typeFilter.value;
+      const contentKeyword = contentFilter.value.trim().toLowerCase();
+      const showOnlyMatches = document.getElementById('showOnlyMatches').checked;
+
+      exportContent.push('# 导出条件');
+      exportContent.push(`导出时间: ${new Date().toLocaleString()}`);
+      exportContent.push(`日志类型: ${selectedType === 'All' ? '全部' : (selectedType === 'Network' ? '网络日志' : '普通日志')}`);
+      exportContent.push(`日志等级: ${selectedLevel === 'All' ? '全部' : selectedLevel}`);
+      if (moduleKeyword) {
+        exportContent.push(`模块筛选: ${moduleKeyword}`);
+      }
+      if (contentKeyword) {
+        exportContent.push(`内容筛选: ${contentKeyword}`);
+        if (showOnlyMatches) {
+          exportContent.push('仅显示匹配内容: 是');
+        }
+      }
+      exportContent.push(`导出数量: ${filteredLogs.length} 条`);
+      exportContent.push('');  // 空行分隔
+      
+      // 添加日志内容
+      exportContent.push('# 日志内容');
+      exportContent.push('[!@#][Log]: start.....');  // 添加日志开始标记
+      
+      // 使用原始行导出日志
+      filteredLogs.forEach(log => {
+        exportContent.push(log.rawContent);
+      });
+      
+      // 4. 获取文件名
+      let baseFileName;
+      const logFile = document.getElementById('logFile').files[0];
+      if (logFile) {
+        baseFileName = logFile.name.replace(/\.[^/.]+$/, "");
+      } else {
+        const logUrl = getLogUrlFromParams();
+        if (logUrl) {
+          const urlParts = logUrl.split('/');
+          baseFileName = urlParts[urlParts.length - 1].replace(/\.[^/.]+$/, "");
+        } else {
+          baseFileName = 'log_export';
+        }
+      }
+      
+      // 构建导出文件名：原文件名+会话号+筛选条件
+      const sessionNumber = currentSessionIndex + 1;
+      const filterInfo = [];
+      if (selectedType !== 'All') filterInfo.push(selectedType);
+      if (selectedLevel !== 'All') filterInfo.push(selectedLevel);
+      if (moduleKeyword) filterInfo.push('filtered');
+      if (contentKeyword && showOnlyMatches) filterInfo.push('searched');
+      
+      const exportFileName = `${baseFileName}_session${sessionNumber}${filterInfo.length ? '_' + filterInfo.join('_') : ''}.txt`;
+      
+      // 5. 导出文件
+      const content = exportContent.join('\n');
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportFileName;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+
+    // 下载原始文件
+    function downloadOriginalFile() {
+      const logUrl = getLogUrlFromParams();
+      if (logUrl) {
+        console.log("logUrl",logUrl);
+        const urlParts = logUrl.split('/');
+        console.log("urlParts",urlParts);
+        const fileName = urlParts[urlParts.length - 1];
+        console.log("fileName",fileName);
+        // 创建一个隐藏的 a 标签来触发下载
+        const a = document.createElement('a');
+        a.href = logUrl;
+        // a.download = fileName;  // 启用下载属性
+        a.target = '_blank';  // 注释掉，因为download和target='_blank'冲突
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    }
+  </script>
+</body>
+</html>

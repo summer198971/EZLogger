@@ -1,0 +1,360 @@
+﻿[!@#]16:23:18:576 [Log] [FileAppender] Log started
+[!@#]16:23:18.577[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:23:18.578[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:23:18.592[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:23:18.592[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:23:18.592[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:23:18.592[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:23:18.592[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:23:18.592[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:23:18.592[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:23:18.592[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:23:18.592[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:23:18.592[Log][F:1][说明] =====================================
+[!@#]16:23:18.880[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:23:18.923[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:23:18.923[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:23:18.925[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:23:18.925[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:23:18.925[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:23:18.925[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:23:18.925[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:23:18.938[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:23:18.938[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:23:21.705[Log][F:1431][测试器] [2.8s] 开始运行测试 #1 (间隔: 2.8s)
+[!@#]16:23:21.706[Log][F:1431][测试] 这是一条Log级别的测试消息 #1
+[!@#]16:23:21.706[Warning][F:1431][测试] 这是一条Warning级别的测试消息 #1
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1388
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:23:21.707[Assert][F:1431][测试] 这是一条Assert级别的测试消息 #1
+[!@#]16:23:21.707[Error][F:1431][测试] 这是一条Error级别的测试消息 #1
+[!@#]16:23:21.707[Exception][F:1431][测试] 这是一条Exception级别的测试消息 #1
+[!@#]16:23:21.708[Log][F:1431][格式化测试] 测试参数: count=1, time=2.85, bool=False
+[!@#]16:23:21.708[Warning][F:1431][性能测试] 字符串插值测试: 1 次调用
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1398
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:23:21.708[Log][F:1431][零开销测试] 昂贵操作0 昂贵操作1 昂贵操作2 昂贵操作3 昂贵操作4 昂贵操作5 昂贵操作6 昂贵操作7 昂贵操作8 昂贵操作9 昂贵操作10 昂贵操作11 昂贵操作12 昂贵操作13 昂贵操作14 昂贵操作15 昂贵操作16 昂贵操作17 昂贵操作18 昂贵操作19 昂贵操作20 昂贵操作21 昂贵操作22 昂贵操作23 昂贵操作24 昂贵操作25 昂贵操作26 昂贵操作27 昂贵操作28 昂贵操作29 昂贵操作30 昂贵操作31 昂贵操作32 昂贵操作33 昂贵操作34 昂贵操作35 昂贵操作36 昂贵操作37 昂贵操作38 昂贵操作39 昂贵操作40 昂贵操作41 昂贵操作42 昂贵操作43 昂贵操作44 昂贵操作45 昂贵操作46 昂贵操作47 昂贵操作48 昂贵操作49 昂贵操作50 昂贵操作51 昂贵操作52 昂贵操作53 昂贵操作54 昂贵操作55 昂贵操作56 昂贵操作57 昂贵操作58 昂贵操作59 昂贵操作60 昂贵操作61 昂贵操作62 昂贵操作63 昂贵操作64 昂贵操作65 昂贵操作66 昂贵操作67 昂贵操作68 昂贵操作69 昂贵操作70 昂贵操作71 昂贵操作72 昂贵操作73 昂贵操作74 昂贵操作75 昂贵操作76 昂贵操作77 昂贵操作78 昂贵操作79 昂贵操作80 昂贵操作81 昂贵操作82 昂贵操作83 昂贵操作84 昂贵操作85 昂贵操作86 昂贵操作87 昂贵操作88 昂贵操作89 昂贵操作90 昂贵操作91 昂贵操作92 昂贵操作93 昂贵操作94 昂贵操作95 昂贵操作96 昂贵操作97 昂贵操作98 昂贵操作99 
+[!@#]16:23:21.708[Log][F:1431][测试器] [2.8s] --- 堆栈跟踪演示开始 ---
+[!@#]16:23:21.709[Log][F:1431][测试器] [2.8s] 🔍 当前配置: EnableStackTrace=True, StackTraceMinLevel=Warning(2)
+[!@#]16:23:21.709[Log][F:1431][测试器] [2.8s] 🔍 位运算测试: Error=False, Warning=True
+[!@#]16:23:21.709[Log][F:1431][测试器] [2.8s] 🔍 Error值=8, Warning值=2, 配置值=2
+[!@#]16:23:21.709[Log][F:1431][测试器] [2.8s] ⚠️ 检测到错误配置，强制修正为ErrorAndAbove
+[!@#]16:23:21.710[Log][F:1431][测试器] [2.8s] ✅ 配置已修正: ErrorAndAbove(24)
+[!@#]16:23:21.710[Log][F:1431][测试器] [2.8s] 演示默认配置: 只有Error/Exception级别应该有堆栈跟踪
+[!@#]16:23:21.710[Log][F:1431][堆栈演示] Log级别消息（无堆栈跟踪）
+[!@#]16:23:21.710[Warning][F:1431][堆栈演示] Warning级别消息（无堆栈跟踪）
+[!@#]16:23:21.710[Error][F:1431][堆栈演示] Error级别消息（有堆栈跟踪）
+Stack Trace:
+    at CriticalConditionalLogger.ExecuteWithPreventDuplicate in ConditionalLogger.cs:202
+    at CriticalConditionalLogger.LogWithCriticalHandling in ConditionalLogger.cs:182
+    at CriticalConditionalLogger.Log in ConditionalLogger.cs:164
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1443
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+
+[!@#]16:23:21.710[Exception][F:1431][堆栈演示] Exception级别消息（有堆栈跟踪）
+Stack Trace:
+    at CriticalConditionalLogger.ExecuteWithPreventDuplicate in ConditionalLogger.cs:202
+    at CriticalConditionalLogger.LogWithCriticalHandling in ConditionalLogger.cs:182
+    at CriticalConditionalLogger.Log in ConditionalLogger.cs:164
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1444
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+
+[!@#]16:23:21.711[Log][F:1431][测试器] [2.8s] 演示调用链堆栈跟踪
+[!@#]16:23:21.711[Error][F:1431][调用链测试] 深层调用错误 #1（应显示完整调用链）
+Stack Trace:
+    at CriticalConditionalLogger.ExecuteWithPreventDuplicate in ConditionalLogger.cs:202
+    at CriticalConditionalLogger.LogWithCriticalHandling in ConditionalLogger.cs:182
+    at CriticalConditionalLogger.Log in ConditionalLogger.cs:164
+    at EZLoggerRuntimeTester.TestCallChainLevel3 in EZLoggerRuntimeTester.cs:1480
+    at EZLoggerRuntimeTester.TestCallChainLevel2 in EZLoggerRuntimeTester.cs:1471
+    at EZLoggerRuntimeTester.TestCallChainLevel1 in EZLoggerRuntimeTester.cs:1463
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1448
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+
+[!@#]16:23:21.711[Log][F:1431][测试器] [2.8s] 演示文件日志堆栈跟踪（查看日志文件以验证格式）
+[!@#]16:23:21.712[Error][F:1431][文件堆栈测试] 此错误消息的堆栈跟踪应该同时出现在Unity控制台和日志文件中
+Stack Trace:
+    at CriticalConditionalLogger.ExecuteWithPreventDuplicate in ConditionalLogger.cs:202
+    at CriticalConditionalLogger.LogWithCriticalHandling in ConditionalLogger.cs:182
+    at CriticalConditionalLogger.Log in ConditionalLogger.cs:164
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1452
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+
+[!@#]16:23:21.712[Log][F:1431][测试器] [2.8s] --- 堆栈跟踪演示完成 ---
+[!@#]16:23:21.712[Log][F:1431][测试器] [2.8s] 💡 提示: 点击'Open Log File'按钮查看文件中的堆栈跟踪格式
+[!@#]16:23:21.712[Log][F:1431][测试器] [2.8s] 测试 #1 完成
+[!@#]16:23:24.020[Log][F:2636][Lifecycle] 应用焦点状态变更: False
+[!@#]16:26:18:638 [Log] [FileAppender] Log started
+[!@#]16:26:18.639[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:26:18.640[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:26:18.655[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:26:18.655[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:26:18.655[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:26:18.655[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:26:18.656[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:26:18.656[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:26:18.656[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:26:18.656[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:26:18.656[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:26:18.656[Log][F:1][说明] =====================================
+[!@#]16:26:18.982[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:26:19.034[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:26:19.034[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:26:19.036[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:26:19.036[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:26:19.036[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:26:19.036[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:26:19.036[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:26:19.049[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:26:19.050[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:27:25:721 [Log] [FileAppender] Log started
+[!@#]16:27:25.723[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:27:25.723[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:27:25.737[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:27:25.737[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:27:25.737[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:27:25.738[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:27:25.738[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:27:25.738[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:27:25.738[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:27:25.738[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:27:25.738[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:27:25.738[Log][F:1][说明] =====================================
+[!@#]16:27:25.974[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:27:26.019[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:27:26.019[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:27:26.020[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:27:26.020[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:27:26.020[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:27:26.021[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:27:26.021[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:27:26.032[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:27:26.032[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:27:27.669[Log][F:655][测试器] [1.7s] 开始运行测试 #1 (间隔: 1.7s)
+[!@#]16:27:27.669[Log][F:655][测试] 这是一条Log级别的测试消息 #1
+[!@#]16:27:27.669[Warning][F:655][测试] 这是一条Warning级别的测试消息 #1
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1388
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:27:27.670[Assert][F:655][测试] 这是一条Assert级别的测试消息 #1
+[!@#]16:27:27.671[Error][F:655][测试] 这是一条Error级别的测试消息 #1
+[!@#]16:27:27.671[Exception][F:655][测试] 这是一条Exception级别的测试消息 #1
+[!@#]16:27:27.671[Log][F:655][格式化测试] 测试参数: count=1, time=1.72, bool=False
+[!@#]16:27:27.671[Warning][F:655][性能测试] 字符串插值测试: 1 次调用
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1398
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:27:27.672[Log][F:655][零开销测试] 昂贵操作0 昂贵操作1 昂贵操作2 昂贵操作3 昂贵操作4 昂贵操作5 昂贵操作6 昂贵操作7 昂贵操作8 昂贵操作9 昂贵操作10 昂贵操作11 昂贵操作12 昂贵操作13 昂贵操作14 昂贵操作15 昂贵操作16 昂贵操作17 昂贵操作18 昂贵操作19 昂贵操作20 昂贵操作21 昂贵操作22 昂贵操作23 昂贵操作24 昂贵操作25 昂贵操作26 昂贵操作27 昂贵操作28 昂贵操作29 昂贵操作30 昂贵操作31 昂贵操作32 昂贵操作33 昂贵操作34 昂贵操作35 昂贵操作36 昂贵操作37 昂贵操作38 昂贵操作39 昂贵操作40 昂贵操作41 昂贵操作42 昂贵操作43 昂贵操作44 昂贵操作45 昂贵操作46 昂贵操作47 昂贵操作48 昂贵操作49 昂贵操作50 昂贵操作51 昂贵操作52 昂贵操作53 昂贵操作54 昂贵操作55 昂贵操作56 昂贵操作57 昂贵操作58 昂贵操作59 昂贵操作60 昂贵操作61 昂贵操作62 昂贵操作63 昂贵操作64 昂贵操作65 昂贵操作66 昂贵操作67 昂贵操作68 昂贵操作69 昂贵操作70 昂贵操作71 昂贵操作72 昂贵操作73 昂贵操作74 昂贵操作75 昂贵操作76 昂贵操作77 昂贵操作78 昂贵操作79 昂贵操作80 昂贵操作81 昂贵操作82 昂贵操作83 昂贵操作84 昂贵操作85 昂贵操作86 昂贵操作87 昂贵操作88 昂贵操作89 昂贵操作90 昂贵操作91 昂贵操作92 昂贵操作93 昂贵操作94 昂贵操作95 昂贵操作96 昂贵操作97 昂贵操作98 昂贵操作99 
+[!@#]16:27:27.672[Log][F:655][测试器] [1.7s] --- 堆栈跟踪演示开始 ---
+[!@#]16:27:27.672[Log][F:655][测试器] [1.7s] 演示默认配置: 只有Error/Exception级别应该有堆栈跟踪
+[!@#]16:27:27.672[Log][F:655][堆栈演示] Log级别消息（无堆栈跟踪）
+[!@#]16:27:27.672[Warning][F:655][堆栈演示] Warning级别消息（无堆栈跟踪）
+Stack Trace:
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1421
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+
+[!@#]16:27:27.673[Error][F:655][堆栈演示] Error级别消息（有堆栈跟踪）
+[!@#]16:27:27.673[Exception][F:655][堆栈演示] Exception级别消息（有堆栈跟踪）
+[!@#]16:27:27.673[Log][F:655][测试器] [1.7s] 演示调用链堆栈跟踪
+[!@#]16:27:27.673[Error][F:655][调用链测试] 深层调用错误 #1（应显示完整调用链）
+[!@#]16:27:27.673[Log][F:655][测试器] [1.7s] 演示文件日志堆栈跟踪（查看日志文件以验证格式）
+[!@#]16:27:27.673[Error][F:655][文件堆栈测试] 此错误消息的堆栈跟踪应该同时出现在Unity控制台和日志文件中
+[!@#]16:27:27.674[Log][F:655][测试器] [1.7s] --- 堆栈跟踪演示完成 ---
+[!@#]16:27:27.674[Log][F:655][测试器] [1.7s] 💡 提示: 点击'Open Log File'按钮查看文件中的堆栈跟踪格式
+[!@#]16:27:27.674[Log][F:655][测试器] [1.7s] 测试 #1 完成
+[!@#]16:27:28.797[Log][F:1140][Lifecycle] 应用焦点状态变更: False
+[!@#]16:46:12:096 [Log] [FileAppender] Log started
+[!@#]16:46:12.098[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:46:12.098[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:46:12.112[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:46:12.112[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:46:12.112[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:46:12.112[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:46:12.113[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:46:12.113[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:46:12.113[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:46:12.113[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:46:12.113[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:46:12.113[Log][F:1][说明] =====================================
+[!@#]16:46:12.635[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:46:12.719[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:46:12.719[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:46:12.720[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:46:12.721[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:46:12.721[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:46:12.721[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:46:12.721[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:46:12.734[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:46:12.734[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:46:20.096[Log][F:3153][Lifecycle] 应用焦点状态变更: False
+[!@#]16:46:32:014 [Log] [FileAppender] Log started
+[!@#]16:46:32.016[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:46:32.017[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:46:32.031[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:46:32.031[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:46:32.031[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:46:32.031[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:46:32.031[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:46:32.031[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:46:32.031[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:46:32.031[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:46:32.031[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:46:32.031[Log][F:1][说明] =====================================
+[!@#]16:46:32.554[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:46:32.622[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:46:32.622[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:46:32.624[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:46:32.624[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:46:32.624[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:46:32.624[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:46:32.624[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:46:32.644[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:46:32.665[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:46:33.684[Log][F:352][Lifecycle] 应用焦点状态变更: False
+[!@#]16:47:00:680 [Log] [FileAppender] Log started
+[!@#]16:47:00.682[Log][F:0][Lifecycle] 应用暂停状态变更: False
+[!@#]16:47:00.682[Log][F:0][Lifecycle] 应用焦点状态变更: True
+[!@#]16:47:00.695[Log][F:1][Systems] 模拟游戏系统已初始化
+[!@#]16:47:00.695[Log][F:1][Demo] EZ Logger 运行时测试器演示已启动
+[!@#]16:47:00.696[Log][F:1][Demo] 当前启用级别: All
+[!@#]16:47:00.696[Log][F:1][说明] === EZ Logger 运行时测试器使用说明 ===
+[!@#]16:47:00.696[Log][F:1][说明] 1. 按 F12 键显示/隐藏测试面板
+[!@#]16:47:00.696[Log][F:1][说明] 2. 在测试面板中可以实时修改日志配置
+[!@#]16:47:00.696[Log][F:1][说明] 3. 点击 'Test Logs' 按钮测试各级别日志
+[!@#]16:47:00.696[Log][F:1][说明] 4. 修改配置后会立即生效，无需重启
+[!@#]16:47:00.696[Log][F:1][说明] 5. 所有配置修改都支持运行时动态调整
+[!@#]16:47:00.696[Log][F:1][说明] =====================================
+[!@#]16:47:00.998[Log][F:2][测试器] [0.0s] 已创建EventSystem组件
+[!@#]16:47:01.049[Log][F:2][Demo] 完整版运行时测试器已自动创建
+[!@#]16:47:01.049[Log][F:2][Demo] 按F12显示/隐藏测试面板
+[!@#]16:47:01.051[Log][F:2][测试器] [0.0s] EZLogger运行时测试器启动完成
+[!@#]16:47:01.051[Log][F:2][测试器] [0.0s] UI创建验证完成:
+[!@#]16:47:01.051[Log][F:2][测试器] [0.0s] Canvas: EZLogger Test Canvas (子元素: 1)
+[!@#]16:47:01.051[Log][F:2][测试器] [0.0s] Panel: Test Panel (子元素: 6)
+[!@#]16:47:01.051[Log][F:2][测试器] [0.0s] Content: Content (子元素: 25)
+[!@#]16:47:01.064[Log][F:2][测试器] [0.0s] 开始修复散落的UI元素...
+[!@#]16:47:01.065[Log][F:2][测试器] [0.0s] UI修复完成，共修复了 0 个元素
+[!@#]16:47:10.698[Log][F:3870][Lifecycle] 应用焦点状态变更: False
+[!@#]16:48:21.475[Log][F:30216][Lifecycle] 应用焦点状态变更: True
+[!@#]16:48:22.176[Log][F:30484][测试器] [81.2s] 开始运行测试 #1 (间隔: 81.2s)
+[!@#]16:48:22.176[Log][F:30484][测试] 这是一条Log级别的测试消息 #1
+[!@#]16:48:22.176[Warning][F:30484][测试] 这是一条Warning级别的测试消息 #1
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1388
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:48:22.178[Assert][F:30484][测试] 这是一条Assert级别的测试消息 #1
+[!@#]16:48:22.178[Error][F:30484][测试] 这是一条Error级别的测试消息 #1
+[!@#]16:48:22.178[Exception][F:30484][测试] 这是一条Exception级别的测试消息 #1
+[!@#]16:48:22.178[Log][F:30484][格式化测试] 测试参数: count=1, time=81.17, bool=False
+[!@#]16:48:22.179[Warning][F:30484][性能测试] 字符串插值测试: 1 次调用
+Stack Trace:
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1398
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+    at StandaloneInputModule.ProcessMouseEvent in StandaloneInputModule.cs:554
+
+[!@#]16:48:22.179[Log][F:30484][零开销测试] 昂贵操作0 昂贵操作1 昂贵操作2 昂贵操作3 昂贵操作4 昂贵操作5 昂贵操作6 昂贵操作7 昂贵操作8 昂贵操作9 昂贵操作10 昂贵操作11 昂贵操作12 昂贵操作13 昂贵操作14 昂贵操作15 昂贵操作16 昂贵操作17 昂贵操作18 昂贵操作19 昂贵操作20 昂贵操作21 昂贵操作22 昂贵操作23 昂贵操作24 昂贵操作25 昂贵操作26 昂贵操作27 昂贵操作28 昂贵操作29 昂贵操作30 昂贵操作31 昂贵操作32 昂贵操作33 昂贵操作34 昂贵操作35 昂贵操作36 昂贵操作37 昂贵操作38 昂贵操作39 昂贵操作40 昂贵操作41 昂贵操作42 昂贵操作43 昂贵操作44 昂贵操作45 昂贵操作46 昂贵操作47 昂贵操作48 昂贵操作49 昂贵操作50 昂贵操作51 昂贵操作52 昂贵操作53 昂贵操作54 昂贵操作55 昂贵操作56 昂贵操作57 昂贵操作58 昂贵操作59 昂贵操作60 昂贵操作61 昂贵操作62 昂贵操作63 昂贵操作64 昂贵操作65 昂贵操作66 昂贵操作67 昂贵操作68 昂贵操作69 昂贵操作70 昂贵操作71 昂贵操作72 昂贵操作73 昂贵操作74 昂贵操作75 昂贵操作76 昂贵操作77 昂贵操作78 昂贵操作79 昂贵操作80 昂贵操作81 昂贵操作82 昂贵操作83 昂贵操作84 昂贵操作85 昂贵操作86 昂贵操作87 昂贵操作88 昂贵操作89 昂贵操作90 昂贵操作91 昂贵操作92 昂贵操作93 昂贵操作94 昂贵操作95 昂贵操作96 昂贵操作97 昂贵操作98 昂贵操作99 
+[!@#]16:48:22.179[Log][F:30484][测试器] [81.2s] --- 堆栈跟踪演示开始 ---
+[!@#]16:48:22.179[Log][F:30484][测试器] [81.2s] 演示默认配置: 只有Error/Exception级别应该有堆栈跟踪
+[!@#]16:48:22.180[Log][F:30484][堆栈演示] Log级别消息（无堆栈跟踪）
+[!@#]16:48:22.180[Warning][F:30484][堆栈演示] Warning级别消息（无堆栈跟踪）
+Stack Trace:
+    at EZLoggerRuntimeTester.TestStackTraceFeatures in EZLoggerRuntimeTester.cs:1421
+    at EZLoggerRuntimeTester.RunLogTests in EZLoggerRuntimeTester.cs:1404
+    at InvokableCall.Invoke in UnityEvent.cs:178
+    at UnityEvent.Invoke in UnityEvent_0.cs:57
+    at Button.Press in Button.cs:70
+    at Button.OnPointerClick in Button.cs:114
+    at ExecuteEvents.Execute in ExecuteEvents.cs:57
+    at ExecuteEvents.Execute in ExecuteEvents.cs:272
+    at StandaloneInputModule.ReleaseMouse in StandaloneInputModule.cs:192
+    at StandaloneInputModule.ProcessMousePress in StandaloneInputModule.cs:654
+
+[!@#]16:48:22.180[Error][F:30484][堆栈演示] Error级别消息（有堆栈跟踪）
+[!@#]16:48:22.180[Exception][F:30484][堆栈演示] Exception级别消息（有堆栈跟踪）
+[!@#]16:48:22.180[Log][F:30484][测试器] [81.2s] 演示调用链堆栈跟踪
+[!@#]16:48:22.180[Error][F:30484][调用链测试] 深层调用错误 #1（应显示完整调用链）
+[!@#]16:48:22.181[Log][F:30484][测试器] [81.2s] 演示文件日志堆栈跟踪（查看日志文件以验证格式）
+[!@#]16:48:22.181[Error][F:30484][文件堆栈测试] 此错误消息的堆栈跟踪应该同时出现在Unity控制台和日志文件中
+[!@#]16:48:22.181[Log][F:30484][测试器] [81.2s] --- 堆栈跟踪演示完成 ---
+[!@#]16:48:22.181[Log][F:30484][测试器] [81.2s] 💡 提示: 点击'Open Log File'按钮查看文件中的堆栈跟踪格式
+[!@#]16:48:22.181[Log][F:30484][测试器] [81.2s] 测试 #1 完成
+[!@#]16:48:23.964[Log][F:31211][Lifecycle] 应用焦点状态变更: False

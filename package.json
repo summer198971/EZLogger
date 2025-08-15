@@ -2,7 +2,7 @@
   "name": "com.ezgame.logger",
   "version": "1.0.7",
   "displayName": "EZ Logger",
-  "description": "A high-performance, zero-allocation logging system for Unity with multi-level support and server integration.",
+  "description": "A high-performance, zero-allocation logging system for Unity with multi-level support, server integration, and built-in web log viewer.",
   "unity": "2020.3",
   "unityRelease": "0f1",
   "documentationUrl": "https://github.com/summer198971/EZLogger/wiki",
@@ -13,7 +13,10 @@
     "debug",
     "performance",
     "unity",
-    "zero-allocation"
+    "zero-allocation",
+    "web-viewer",
+    "log-analysis",
+    "browser-based"
   ],
   "author": {
     "name": "EZ Game Studio",
@@ -38,7 +41,9 @@
     "LICENSE.md",
     "LICENSE.md.meta",
     "package.json",
-    "package.json.meta"
+    "package.json.meta",
+    "Web/**/*",
+    "Web.meta"
   ],
   "dependencies": {},
   "samples": [
@@ -51,11 +56,6 @@
       "displayName": "Advanced Configuration",
       "description": "Advanced configuration examples with custom appenders",
       "path": "Samples~/Advanced Configuration"
-    },
-    {
-      "displayName": "Runtime Tester Demo",
-      "description": "Examples of runtime tester demo",
-      "path": "Samples~/Runtime Tester Demo"
     }
   ]
 }
